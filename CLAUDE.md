@@ -1,9 +1,22 @@
-# CLAUDE.md
+# Animal Tracker Map
+Static site showing ~25 species: sightings, migration tracks, conservation status.
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Stack
+- web/: Vite + TypeScript + MapLibre GL JS, deployed on Cloudflare Pages
+- web/worker/: Cloudflare Worker for live GBIF counts
+- pipeline/: Python 3.11, GitHub Actions weekly run, writes to data/
 
-## Project status
+## Rules
+- Cost must stay $0. No paid APIs. Hard stop in code if a limit is near.
+- IUCN: non-commercial only, 0.5 s minimum between calls, no bulk scraping.
+- Movebank: accept licence per study, keep citations, do not commit raw data.
+- Secrets live in .env and GitHub Actions secrets. Never commit them.
+- Every outside call: timeout, retry with backoff, error handling, logging.
+- Every screen: loading state, empty state, failed-request state.
+- Worker: rate limit per IP, cache repeat requests, paginate large results.
+- Compress generated data files. Add tests with every feature.
 
-This repository has no application code yet: it contains only a title-only `README.md`, an MIT `LICENSE`, and the default Node `.gitignore` and `.gitattributes` from the initial commit. There is no `package.json`, so no build, lint, or test commands exist, and no language, framework, or architecture has been chosen.
-
-Update this file with real commands and architecture notes once the project is scaffolded.
+## Commands
+- web: npm run dev | npm test | npm run build
+- pipeline: python -m pytest
+- Work on a branch per milestone, open a PR, wait for CI.
