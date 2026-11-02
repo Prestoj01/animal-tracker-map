@@ -17,6 +17,6 @@ Static site showing ~25 species: sightings, migration tracks, conservation statu
 - Compress generated data files. Add tests with every feature.
 
 ## Commands
-- web: npm run dev | npm test | npm run build
-- pipeline: python -m pytest
+- web: npm run dev | npm run lint | npm test | npm run build
+- pipeline: ruff check . | python -m pytest
 - Work on a branch per milestone, open a PR, wait for CI.

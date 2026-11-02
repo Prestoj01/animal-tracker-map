@@ -1,9 +1,0 @@
-pyproject.toml
-src/animal_tracker_pipeline/__init__.py
-src/animal_tracker_pipeline/species.py
-src/animal_tracker_pipeline.egg-info/PKG-INFO
-src/animal_tracker_pipeline.egg-info/SOURCES.txt
-src/animal_tracker_pipeline.egg-info/dependency_links.txt
-src/animal_tracker_pipeline.egg-info/requires.txt
-src/animal_tracker_pipeline.egg-info/top_level.txt
-tests/test_species.py
