@@ -2,12 +2,14 @@
 Static site showing ~25 species: sightings, migration tracks, conservation status.
 
 ## Stack
-- web/: Vite + TypeScript + MapLibre GL JS, deployed on Cloudflare Pages
+- web/: Vite + TypeScript + MapLibre GL JS, deployed as Cloudflare Workers static assets (web/wrangler.jsonc, no script)
 - web/worker/: Cloudflare Worker for live GBIF counts
 - pipeline/: Python 3.11, GitHub Actions weekly run, writes to data/
 
 ## Rules
 - Cost must stay $0. No paid APIs. Hard stop in code if a limit is near.
+- Stay on the Cloudflare Workers Free plan. Keep the site in static assets: adding a script to web/wrangler.jsonc makes requests count against the 100,000/day limit.
+- Keep this repo public: GitHub Actions is only free without a usage cap on public repos.
 - IUCN: non-commercial only, 0.5 s minimum between calls, no bulk scraping.
 - Movebank: accept licence per study, keep citations, do not commit raw data.
 - Secrets live in .env and GitHub Actions secrets. Never commit them.
