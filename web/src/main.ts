@@ -1,4 +1,6 @@
 import { createMap } from "./map";
+import { loadSightings } from "./sightings";
+import { createSightingsController } from "./sightingsController";
 import { loadSpecies } from "./species";
 import { renderSpeciesPicker } from "./speciesPicker";
 import "./style.css";
@@ -11,5 +13,9 @@ function byId(id: string): HTMLElement {
   return element;
 }
 
-createMap(byId("map"), byId("map-status"));
-void renderSpeciesPicker(byId("species-picker"), loadSpecies);
+const map = createMap(byId("map"), byId("map-status"));
+void renderSpeciesPicker(
+  byId("species-picker"),
+  loadSpecies,
+  createSightingsController(map, loadSightings, byId("legend")),
+);

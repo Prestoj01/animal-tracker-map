@@ -27,6 +27,15 @@ describe("fetchJson", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("decompresses gzipped JSON", async () => {
+    const plain = new Response(JSON.stringify({ zipped: true })).body as ReadableStream;
+    const compressed = plain.pipeThrough(new CompressionStream("gzip"));
+    const body = await new Response(compressed).arrayBuffer();
+    fetchMock.mockResolvedValueOnce(new Response(body));
+
+    await expect(fetchJson("/x.json.gz")).resolves.toEqual({ zipped: true });
+  });
+
   it("retries server errors and network failures", async () => {
     fetchMock
       .mockResolvedValueOnce(jsonResponse({}, 503))

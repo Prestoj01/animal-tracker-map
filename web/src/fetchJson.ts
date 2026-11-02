@@ -18,6 +18,21 @@ function isRetryable(error: unknown): boolean {
   return !(error instanceof SyntaxError);
 }
 
+/**
+ * Decodes JSON that may be gzipped. A host may or may not decompress .gz files
+ * itself, so this checks the bytes rather than trusting the file name or headers.
+ */
+async function decodeJson(buffer: ArrayBuffer): Promise<unknown> {
+  const bytes = new Uint8Array(buffer);
+  const isGzip = bytes[0] === 0x1f && bytes[1] === 0x8b;
+  if (!isGzip) {
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }
+  const compressed = new Response(buffer).body as ReadableStream;
+  const stream = compressed.pipeThrough(new DecompressionStream("gzip"));
+  return JSON.parse(await new Response(stream).text());
+}
+
 async function attempt(url: string, timeoutMs: number): Promise<unknown> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -26,7 +41,7 @@ async function attempt(url: string, timeoutMs: number): Promise<unknown> {
     if (!response.ok) {
       throw new HttpError(response.status);
     }
-    return await response.json();
+    return await decodeJson(await response.arrayBuffer());
   } finally {
     clearTimeout(timer);
   }

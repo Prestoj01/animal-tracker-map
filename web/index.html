@@ -6,13 +6,14 @@
     <title>Animal Tracker Map</title>
   </head>
   <body>
-    <header class="toolbar">
+    <aside class="sidebar">
       <h1>Animal Tracker Map</h1>
       <div id="species-picker"></div>
-    </header>
+    </aside>
     <main class="map-area">
       <div id="map"></div>
       <p id="map-status" class="map-status" role="status" hidden></p>
+      <ul id="legend" class="legend" aria-label="Species on the map" hidden></ul>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

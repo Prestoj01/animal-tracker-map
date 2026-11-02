@@ -77,6 +77,13 @@ web_modules/
 .env.*
 !.env.example
 
+# Conflict copies made by iCloud sync, such as "main 2.ts"
+* [0-9]
+* [0-9].*
+
+# Local Wrangler state
+.wrangler/
+
 # Python
 __pycache__/
 *.py[cod]
