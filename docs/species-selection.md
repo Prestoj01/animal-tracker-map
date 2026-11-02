@@ -2,10 +2,10 @@
 
 No definitive ranking of the world's most popular animals exists, so the list has two parts:
 
-- **The first 13 species** are the top 10 from Courchamp et al. 2018, ["The most charismatic species"](https://doi.org/10.1371/journal.pbio.2003997). Elephants and gorillas each count as one rank but cover several species. The study measures Western audiences.
+- **The first 13 species** are the top 10 from Courchamp et al. 2018, ["The paradoxical extinction of the most charismatic animals"](https://doi.org/10.1371/journal.pbio.2003997). Elephants and gorillas each count as one rank but cover several species. The study measures Western audiences.
 - **The other 12 are a judgement call:** well-known animals, favouring those with usable tracking data.
 
-Availability was checked on 2026-11-01. Sightings are GBIF records with coordinates. The study is the largest single-species Movebank study marked downloadable for our account. Its data has not been downloaded yet, and a licence may still need accepting. IUCN status has not been checked.
+Availability was checked on 2026-11-01. Sightings are GBIF records with coordinates. Each study is a Movebank study marked downloadable for our account, generally the largest for that species, preferring single-species studies and standard licences. Its data has not been downloaded yet, and a licence may still need accepting. IUCN status has not been checked.
 
 | Species | GBIF sightings | Movebank study ID | Licence | Locations | Animals |
 | --- | ---: | --- | --- | ---: | ---: |
