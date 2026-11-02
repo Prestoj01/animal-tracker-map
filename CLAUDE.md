@@ -21,4 +21,4 @@ Static site showing ~25 species: sightings, migration tracks, conservation statu
 ## Commands
 - web: npm run dev | npm run lint | npm test | npm run build
 - pipeline: ruff check . | python -m pytest
-- Work on a branch per milestone, open a PR, wait for CI.
+- Commit and push directly to main. No branches or PRs. Run lint and tests before pushing.
