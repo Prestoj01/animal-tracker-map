@@ -1,17 +1,27 @@
 [
-  {
-    "id": "arctic-tern",
-    "commonName": "Arctic tern",
-    "scientificName": "Sterna paradisaea"
-  },
-  {
-    "id": "grey-wolf",
-    "commonName": "Grey wolf",
-    "scientificName": "Canis lupus"
-  },
-  {
-    "id": "leatherback-sea-turtle",
-    "commonName": "Leatherback sea turtle",
-    "scientificName": "Dermochelys coriacea"
-  }
+  { "id": "tiger", "commonName": "Tiger", "scientificName": "Panthera tigris" },
+  { "id": "lion", "commonName": "Lion", "scientificName": "Panthera leo" },
+  { "id": "african-bush-elephant", "commonName": "African bush elephant", "scientificName": "Loxodonta africana" },
+  { "id": "african-forest-elephant", "commonName": "African forest elephant", "scientificName": "Loxodonta cyclotis" },
+  { "id": "asian-elephant", "commonName": "Asian elephant", "scientificName": "Elephas maximus" },
+  { "id": "giraffe", "commonName": "Giraffe", "scientificName": "Giraffa camelopardalis" },
+  { "id": "leopard", "commonName": "Leopard", "scientificName": "Panthera pardus" },
+  { "id": "giant-panda", "commonName": "Giant panda", "scientificName": "Ailuropoda melanoleuca" },
+  { "id": "cheetah", "commonName": "Cheetah", "scientificName": "Acinonyx jubatus" },
+  { "id": "polar-bear", "commonName": "Polar bear", "scientificName": "Ursus maritimus" },
+  { "id": "grey-wolf", "commonName": "Grey wolf", "scientificName": "Canis lupus" },
+  { "id": "western-gorilla", "commonName": "Western gorilla", "scientificName": "Gorilla gorilla" },
+  { "id": "eastern-gorilla", "commonName": "Eastern gorilla", "scientificName": "Gorilla beringei" },
+  { "id": "chimpanzee", "commonName": "Chimpanzee", "scientificName": "Pan troglodytes" },
+  { "id": "koala", "commonName": "Koala", "scientificName": "Phascolarctos cinereus" },
+  { "id": "orca", "commonName": "Orca", "scientificName": "Orcinus orca" },
+  { "id": "jaguar", "commonName": "Jaguar", "scientificName": "Panthera onca" },
+  { "id": "brown-bear", "commonName": "Brown bear", "scientificName": "Ursus arctos" },
+  { "id": "plains-zebra", "commonName": "Plains zebra", "scientificName": "Equus quagga" },
+  { "id": "humpback-whale", "commonName": "Humpback whale", "scientificName": "Megaptera novaeangliae" },
+  { "id": "blue-whale", "commonName": "Blue whale", "scientificName": "Balaenoptera musculus" },
+  { "id": "green-sea-turtle", "commonName": "Green sea turtle", "scientificName": "Chelonia mydas" },
+  { "id": "emperor-penguin", "commonName": "Emperor penguin", "scientificName": "Aptenodytes forsteri" },
+  { "id": "bald-eagle", "commonName": "Bald eagle", "scientificName": "Haliaeetus leucocephalus" },
+  { "id": "snowy-owl", "commonName": "Snowy owl", "scientificName": "Bubo scandiacus" }
 ]
