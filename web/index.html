@@ -11,7 +11,7 @@
     <title>Animal Tracker Map</title>
   </head>
   <body>
-    <aside class="sidebar">
+    <aside id="sidebar" class="sidebar">
       <header class="brand">
         <h1><span aria-hidden="true">🐾</span> Animal Tracker</h1>
         <p>Where the world's best-loved animals live and roam</p>
@@ -37,6 +37,21 @@
     </aside>
     <main class="map-area">
       <div id="map"></div>
+      <button
+        id="sidebar-toggle"
+        class="sidebar-toggle panel"
+        type="button"
+        aria-controls="sidebar"
+        aria-expanded="true"
+      >
+        <span aria-hidden="true">‹</span>
+        <span class="visually-hidden">Hide the animal list</span>
+      </button>
+      <section id="welcome" class="welcome panel" aria-labelledby="welcome-title">
+        <h2 id="welcome-title">Pick an animal to start exploring</h2>
+        <p>See where each animal has been spotted, and follow tracked animals on their journeys.</p>
+        <div id="welcome-presets" class="welcome-presets"></div>
+      </section>
       <p id="map-status" class="map-status panel" role="status" hidden></p>
       <ul id="legend" class="legend panel" aria-label="Animals on the map" hidden></ul>
     </main>

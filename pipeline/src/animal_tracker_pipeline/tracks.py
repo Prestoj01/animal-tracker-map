@@ -22,6 +22,7 @@ from animal_tracker_pipeline.movebank import (
 )
 from animal_tracker_pipeline.output import write_json_gz
 from animal_tracker_pipeline.species import DEFAULT_PATH, Species, load_species
+from animal_tracker_pipeline.summary import write_summary
 
 logger = logging.getLogger(__name__)
 
@@ -193,6 +194,7 @@ def main() -> int:
     except MovebankError as error:
         logger.error("%s", error)
         return 1
+    write_summary()
     if problems["licence"]:
         logger.error("Licences to accept: %s", ", ".join(problems["licence"]))
     if problems["failed"]:

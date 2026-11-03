@@ -1,5 +1,6 @@
+import { groupOrder, PRESETS, speciesGroup, speciesIcon } from "./catalog";
 import type { Species } from "./species";
-import { speciesIcon } from "./speciesIcons";
+import type { Summary } from "./summary";
 
 // Map dots can sit beside any other colour, so every pair must stay distinct. This
 // is the largest set that passes that check on the dark basemap, for normal and
@@ -16,6 +17,20 @@ export interface RowStatus {
 export interface PickerHandlers {
   onSelect(species: Species, color: string, status: RowStatus): void;
   onDeselect(species: Species): void;
+}
+
+export interface PickerOptions {
+  /** Data counts for badges. The picker still works without them. */
+  loadSummary?: () => Promise<Summary>;
+  /** Called with the picked species' ids, in the order they were picked. */
+  onSelectionChange?: (ids: string[]) => void;
+  /** Called once the cards are shown, with a way to change the selection. */
+  onReady?: (api: PickerApi) => void;
+}
+
+export interface PickerApi {
+  /** Replaces the selection with these species, as far as the colour limit allows. */
+  pick(ids: string[]): void;
 }
 
 function showMessage(container: HTMLElement, text: string): HTMLElement {
@@ -42,6 +57,19 @@ function createStatus(element: HTMLElement): RowStatus {
   };
 }
 
+function element<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  className: string,
+  text?: string,
+): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag);
+  node.className = className;
+  if (text !== undefined) {
+    node.textContent = text;
+  }
+  return node;
+}
+
 interface Card {
   item: HTMLElement;
   checkbox: HTMLInputElement;
@@ -50,36 +78,53 @@ interface Card {
   species: Species;
 }
 
-function createCard(species: Species): Card {
-  const item = document.createElement("li");
-  item.className = "species-card";
+function createBadges(counts: Summary[string] | undefined): HTMLElement | null {
+  if (!counts) {
+    return null;
+  }
+  const badges = element("span", "badges");
+  const add = (text: string, available: boolean, title: string) => {
+    const badge = element("span", available ? "badge" : "badge badge-missing", text);
+    badge.title = title;
+    badges.append(badge);
+  };
+  add(
+    "Sightings",
+    counts.sightings > 0,
+    counts.sightings > 0 ? "Has sightings" : "No sightings yet",
+  );
+  add(
+    "Tracks",
+    counts.tracks > 0,
+    counts.tracks > 0 ? `${counts.tracks} animals tracked` : "No migration tracks",
+  );
+  return badges;
+}
+
+function createCard(species: Species, counts: Summary[string] | undefined): Card {
+  const item = element("li", "species-card");
 
   // The checkbox stays in the page for keyboards and screen readers; the card is
   // its visible label.
   const label = document.createElement("label");
-  const checkbox = document.createElement("input");
+  const checkbox = element("input", "visually-hidden");
   checkbox.type = "checkbox";
   checkbox.value = species.id;
-  checkbox.className = "visually-hidden";
 
-  const icon = document.createElement("span");
-  icon.className = "card-icon";
+  const icon = element("span", "card-icon", speciesIcon(species.id));
   icon.setAttribute("aria-hidden", "true");
-  icon.textContent = speciesIcon(species.id);
-
-  const name = document.createElement("span");
-  name.className = "species-name";
-  name.textContent = species.commonName;
+  const name = element("span", "species-name", species.commonName);
   name.title = species.scientificName;
-
-  const swatch = document.createElement("span");
-  swatch.className = "swatch";
-
-  const status = document.createElement("span");
-  status.className = "species-status";
-  status.setAttribute("aria-live", "polite");
+  const swatch = element("span", "swatch");
 
   label.append(checkbox, swatch, icon, name);
+  const badges = createBadges(counts);
+  if (badges) {
+    label.append(badges);
+  }
+
+  const status = element("span", "species-status");
+  status.setAttribute("aria-live", "polite");
   item.append(label, status);
   return { item, checkbox, swatch, status, species };
 }
@@ -87,23 +132,32 @@ function createCard(species: Species): Card {
 function showPicker(
   container: HTMLElement,
   species: Species[],
+  summary: Summary | null,
   handlers: PickerHandlers,
-): void {
+  onSelectionChange: (ids: string[]) => void,
+): PickerApi {
+  // The colour stays with the species until it is deselected, so changing the
+  // selection never repaints what is already on the map. Map order is pick order.
+  const colorOf = new Map<string, string>();
+  const cards = species.map((entry) => createCard(entry, summary?.[entry.id]));
+  const cardOf = new Map(cards.map((card) => [card.species.id, card]));
+
   const fieldset = document.createElement("fieldset");
   const legend = document.createElement("legend");
-  const heading = document.createElement("span");
+  const heading = element("span", "");
   heading.setAttribute("aria-live", "polite");
-
-  const clear = document.createElement("button");
+  const clear = element("button", "clear-button", "Clear all");
   clear.type = "button";
-  clear.className = "clear-button";
-  clear.textContent = "Clear all";
-  clear.disabled = true;
+  legend.append(heading, clear);
 
-  // The colour stays with the species until it is deselected, so changing the
-  // selection never repaints what is already on the map.
-  const colorOf = new Map<string, string>();
-  const cards = species.map(createCard);
+  // The tray lists what's on the map, so it can be read and changed without
+  // scrolling through every card.
+  const tray = element("ul", "picked-tray");
+  tray.setAttribute("aria-label", "On the map");
+
+  const presets = element("div", "presets");
+  const presetLabel = element("span", "presets-label", "Quick picks");
+  presets.append(presetLabel);
 
   const refresh = () => {
     const full = colorOf.size >= SERIES_COLORS.length;
@@ -115,6 +169,41 @@ function showPicker(
       colorOf.size === 0
         ? `Animals · pick up to ${SERIES_COLORS.length}`
         : `Animals · ${colorOf.size} of ${SERIES_COLORS.length} picked`;
+
+    tray.replaceChildren(
+      ...[...colorOf].map(([id, color]) => {
+        const card = cardOf.get(id) as Card;
+        const chip = element("li", "chip");
+        chip.style.setProperty("--series", color);
+        const dot = element("span", "swatch");
+        dot.style.backgroundColor = color;
+        const remove = element("button", "chip-remove", "✕");
+        remove.type = "button";
+        remove.setAttribute("aria-label", `Remove ${card.species.commonName}`);
+        remove.addEventListener("click", () => {
+          deselect(card);
+          refresh();
+        });
+        chip.append(dot, `${speciesIcon(id)} ${card.species.commonName}`, remove);
+        return chip;
+      }),
+    );
+    tray.hidden = colorOf.size === 0;
+    onSelectionChange([...colorOf.keys()]);
+  };
+
+  const select = (card: Card): boolean => {
+    const used = new Set(colorOf.values());
+    const color = SERIES_COLORS.find((candidate) => !used.has(candidate));
+    if (!color) {
+      return false;
+    }
+    colorOf.set(card.species.id, color);
+    card.checkbox.checked = true;
+    card.item.style.setProperty("--series", color);
+    card.swatch.style.backgroundColor = color;
+    handlers.onSelect(card.species, color, createStatus(card.status));
+    return true;
   };
 
   const deselect = (card: Card) => {
@@ -126,22 +215,16 @@ function showPicker(
     handlers.onDeselect(card.species);
   };
 
-  const list = document.createElement("ul");
-  list.className = "species-grid";
+  const clearAll = () => {
+    cards.filter(({ checkbox }) => checkbox.checked).forEach(deselect);
+  };
+
   for (const card of cards) {
-    list.append(card.item);
     card.checkbox.addEventListener("change", () => {
       if (card.checkbox.checked) {
-        const used = new Set(colorOf.values());
-        const color = SERIES_COLORS.find((candidate) => !used.has(candidate));
-        if (!color) {
+        if (!select(card)) {
           card.checkbox.checked = false;
-          return;
         }
-        colorOf.set(card.species.id, color);
-        card.item.style.setProperty("--series", color);
-        card.swatch.style.backgroundColor = color;
-        handlers.onSelect(card.species, color, createStatus(card.status));
       } else {
         deselect(card);
       }
@@ -150,14 +233,53 @@ function showPicker(
   }
 
   clear.addEventListener("click", () => {
-    cards.filter(({ checkbox }) => checkbox.checked).forEach(deselect);
+    clearAll();
     refresh();
   });
 
-  legend.append(heading, clear);
-  fieldset.append(legend, list);
-  container.replaceChildren(fieldset);
+  const api: PickerApi = {
+    pick(ids) {
+      clearAll();
+      for (const id of ids) {
+        const card = cardOf.get(id);
+        if (card && !select(card)) {
+          break;
+        }
+      }
+      refresh();
+    },
+  };
+
+  for (const preset of PRESETS) {
+    const available = preset.ids.filter((id) => cardOf.has(id));
+    if (available.length === 0) {
+      continue;
+    }
+    const button = element("button", "preset", `${preset.icon} ${preset.label}`);
+    button.type = "button";
+    button.addEventListener("click", () => api.pick(available));
+    presets.append(button);
+  }
+
+  const sections = groupOrder()
+    .map((group) => {
+      const members = cards.filter((card) => speciesGroup(card.species.id) === group);
+      if (members.length === 0) {
+        return null;
+      }
+      const section = element("section", "species-group");
+      const title = element("h3", "group-title", group);
+      const list = element("ul", "species-grid");
+      list.append(...members.map((card) => card.item));
+      section.append(title, list);
+      return section;
+    })
+    .filter((section) => section !== null);
+
+  fieldset.append(legend, tray, ...sections);
+  container.replaceChildren(presets, fieldset);
   refresh();
+  return api;
 }
 
 /** Renders the picker through its loading, empty, failed and ready states. */
@@ -165,15 +287,23 @@ export async function renderSpeciesPicker(
   container: HTMLElement,
   load: () => Promise<Species[]>,
   handlers: PickerHandlers,
+  options: PickerOptions = {},
 ): Promise<void> {
+  const { loadSummary, onSelectionChange = () => {}, onReady = () => {} } = options;
   showMessage(container, "Loading animals…");
+  // Badges are a bonus: without the summary, the cards still work.
+  const summaryRequest = loadSummary?.().catch((error: unknown) => {
+    console.error("Could not load the data summary", error);
+    return null;
+  });
   try {
     const species = await load();
     if (species.length === 0) {
       showMessage(container, "No animals available yet.");
-    } else {
-      showPicker(container, species, handlers);
+      return;
     }
+    const summary = (await summaryRequest) ?? null;
+    onReady(showPicker(container, species, summary, handlers, onSelectionChange));
   } catch (error) {
     console.error("Could not load species", error);
     const message = showMessage(container, "Could not load animals. ");
@@ -181,7 +311,7 @@ export async function renderSpeciesPicker(
     retry.type = "button";
     retry.textContent = "Try again";
     retry.addEventListener("click", () => {
-      void renderSpeciesPicker(container, load, handlers);
+      void renderSpeciesPicker(container, load, handlers, options);
     });
     message.append(retry);
   }

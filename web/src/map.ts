@@ -16,6 +16,8 @@ setWorkerUrl(workerUrl);
 // OpenFreeMap needs no API key or account, which keeps the map at $0.
 const STYLE_URL = "https://tiles.openfreemap.org/styles/dark";
 const LOAD_TIMEOUT_MS = 15000;
+// Waits for an animal's sightings and tracks to both arrive before moving once.
+const FIT_DELAY_MS = 250;
 const FAILED_MESSAGE = "The map could not be loaded. Check your connection and reload the page.";
 
 export type LayerKind = "sightings" | "tracks";
@@ -59,6 +61,11 @@ export function createMap(container: HTMLElement, status: HTMLElement): Sighting
 
   map.addControl(new NavigationControl());
 
+  // Keeps the map filling its container when the sidebar opens, closes or moves.
+  if (typeof ResizeObserver !== "undefined") {
+    new ResizeObserver(() => map.resize()).observe(container);
+  }
+
   let loaded = false;
   const whenLoaded: (() => void)[] = [];
   const timer = setTimeout(() => {
@@ -83,6 +90,37 @@ export function createMap(container: HTMLElement, status: HTMLElement): Sighting
   });
 
   const popup = new Popup({ closeButton: false, closeOnClick: false });
+
+  // Each species' west, south, east and north edges, so the map can frame them all.
+  const extents = new Map<string, [number, number, number, number]>();
+  let fitTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const extend = (id: string, points: Point[]) => {
+    for (const [longitude, latitude] of points) {
+      const box = extents.get(id) ?? [longitude, latitude, longitude, latitude];
+      extents.set(id, [
+        Math.min(box[0], longitude),
+        Math.min(box[1], latitude),
+        Math.max(box[2], longitude),
+        Math.max(box[3], latitude),
+      ]);
+    }
+    clearTimeout(fitTimer);
+    fitTimer = setTimeout(() => {
+      const boxes = [...extents.values()];
+      if (!loaded || boxes.length === 0) {
+        return;
+      }
+      const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      map.fitBounds(
+        [
+          [Math.min(...boxes.map((box) => box[0])), Math.min(...boxes.map((box) => box[1]))],
+          [Math.max(...boxes.map((box) => box[2])), Math.max(...boxes.map((box) => box[3]))],
+        ],
+        { padding: 48, maxZoom: 5, duration: reduceMotion ? 0 : 1200 },
+      );
+    }, FIT_DELAY_MS);
+  };
   const visible: Record<LayerKind, boolean> = { sightings: true, tracks: true };
   const layers = new Set<string>();
   // Layers added before the map loads wait here, and can be cancelled by a hide.
@@ -137,6 +175,7 @@ export function createMap(container: HTMLElement, status: HTMLElement): Sighting
 
   return {
     showSightings(id, name, color, points) {
+      extend(id, points);
       const features = points.map(
         (coordinates): GeoJSON.Feature => ({
           type: "Feature",
@@ -156,6 +195,7 @@ export function createMap(container: HTMLElement, status: HTMLElement): Sighting
       );
     },
     showTracks(id, name, color, tracks) {
+      extend(id, tracks.flat());
       const features = tracks.flatMap(splitAtAntimeridian).map(
         (coordinates): GeoJSON.Feature => ({
           type: "Feature",
@@ -173,6 +213,8 @@ export function createMap(container: HTMLElement, status: HTMLElement): Sighting
       );
     },
     hideSpecies(id) {
+      // The view stays put, so removing an animal doesn't jolt the map.
+      extents.delete(id);
       for (const kind of ["sightings", "tracks"] as const) {
         const layer = layerId(kind, id);
         pending.delete(layer);

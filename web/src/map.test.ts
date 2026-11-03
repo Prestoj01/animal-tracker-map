@@ -14,6 +14,7 @@ const mock = vi.hoisted(() => ({
   layers: new Map<string, FakeLayer>(),
   sources: new Map<string, { data: { features: { geometry: { type: string } }[] } }>(),
   failToConstruct: false,
+  fits: [] as unknown[],
 }));
 
 // jsdom has no WebGL, so the real library cannot run here.
@@ -44,6 +45,9 @@ vi.mock("maplibre-gl", () => ({
     }
     removeSource(id: string) {
       mock.sources.delete(id);
+    }
+    fitBounds(bounds: unknown) {
+      mock.fits.push(bounds);
     }
     setLayoutProperty(id: string, _name: string, value: string) {
       const layer = mock.layers.get(id);
@@ -78,6 +82,7 @@ beforeEach(() => {
   mock.layerOrder = [];
   mock.sources.clear();
   mock.failToConstruct = false;
+  mock.fits = [];
   status = document.createElement("p");
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.useFakeTimers();
@@ -240,5 +245,48 @@ describe("createMap", () => {
     mock.handlers.get("load")?.({});
 
     expect(mock.layers.size).toBe(0);
+  });
+
+  it("frames every picked animal once its data has arrived", () => {
+    const map = loadedMap();
+
+    map.showSightings("lion", "Lion", "#000", [
+      [10, -5],
+      [30, 5],
+    ]);
+    map.showTracks("lion", "Lion", "#000", [
+      [
+        [20, -20],
+        [25, -10],
+      ],
+    ]);
+    map.showSightings("wolf", "Wolf", "#111", [[-100, 50]]);
+    expect(mock.fits).toEqual([]);
+
+    vi.advanceTimersByTime(250);
+    expect(mock.fits).toEqual([
+      [
+        [-100, -20],
+        [30, 50],
+      ],
+    ]);
+  });
+
+  it("forgets a hidden animal's area without moving the map", () => {
+    const map = loadedMap();
+    map.showSightings("lion", "Lion", "#000", [[10, -5]]);
+    map.showSightings("wolf", "Wolf", "#111", [[-100, 50]]);
+    vi.advanceTimersByTime(250);
+
+    map.hideSpecies("wolf");
+    vi.advanceTimersByTime(250);
+    expect(mock.fits).toHaveLength(1);
+
+    map.showSightings("tiger", "Tiger", "#222", [[80, 20]]);
+    vi.advanceTimersByTime(250);
+    expect(mock.fits.at(-1)).toEqual([
+      [10, -5],
+      [80, 20],
+    ]);
   });
 });

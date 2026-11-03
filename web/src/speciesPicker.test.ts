@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Species } from "./species";
-import { speciesIcon } from "./speciesIcons";
-import { renderSpeciesPicker, SERIES_COLORS } from "./speciesPicker";
+import { speciesIcon } from "./catalog";
+import { renderSpeciesPicker, SERIES_COLORS, type PickerApi } from "./speciesPicker";
 
 const manySpecies: Species[] = Array.from({ length: 10 }, (_, index) => ({
   id: `s${index}`,
@@ -152,5 +152,95 @@ describe("renderSpeciesPicker", () => {
     expect(handlers.onDeselect).toHaveBeenCalledTimes(2);
     expect(checkbox("s0").checked).toBe(false);
     expect(clearButton().disabled).toBe(true);
+  });
+
+  it("groups cards under headings", async () => {
+    const mixed: Species[] = [
+      { id: "lion", commonName: "Lion", scientificName: "Panthera leo" },
+      { id: "bald-eagle", commonName: "Bald eagle", scientificName: "Haliaeetus" },
+      { id: "tiger", commonName: "Tiger", scientificName: "Panthera tigris" },
+    ];
+    await renderSpeciesPicker(container, async () => mixed, handlers);
+
+    const groups = [...container.querySelectorAll(".species-group")].map((group) => [
+      group.querySelector("h3")?.textContent,
+      [...group.querySelectorAll("input")].map((input) => input.value),
+    ]);
+    expect(groups).toEqual([
+      ["Big cats", ["lion", "tiger"]],
+      ["Birds", ["bald-eagle"]],
+    ]);
+  });
+
+  it("shows data badges from the summary, and works without one", async () => {
+    await renderSpeciesPicker(container, async () => manySpecies, handlers, {
+      loadSummary: async () => ({ s0: { sightings: 5, tracks: 0 } }),
+    });
+    const badges = (id: string) =>
+      [...(checkbox(id).closest(".species-card")?.querySelectorAll(".badge") ?? [])].map(
+        (badge) => [badge.textContent, badge.classList.contains("badge-missing")],
+      );
+
+    expect(badges("s0")).toEqual([
+      ["Sightings", false],
+      ["Tracks", true],
+    ]);
+    expect(badges("s1")).toEqual([]);
+
+    await renderSpeciesPicker(container, async () => manySpecies, handlers, {
+      loadSummary: async () => {
+        throw new Error("down");
+      },
+    });
+    expect(container.querySelectorAll("input[type=checkbox]")).toHaveLength(10);
+  });
+
+  it("lists picked animals in a tray that can remove them", async () => {
+    const onSelectionChange = vi.fn();
+    await renderSpeciesPicker(container, async () => manySpecies, handlers, {
+      onSelectionChange,
+    });
+    const tray = container.querySelector(".picked-tray") as HTMLElement;
+    expect(tray.hidden).toBe(true);
+
+    toggle("s1");
+    toggle("s0");
+    expect(tray.hidden).toBe(false);
+    expect([...tray.querySelectorAll("li")].map((chip) => chip.textContent)).toEqual([
+      expect.stringContaining("Species 1"),
+      expect.stringContaining("Species 0"),
+    ]);
+    expect(onSelectionChange).toHaveBeenLastCalledWith(["s1", "s0"]);
+
+    (tray.querySelector('[aria-label="Remove Species 1"]') as HTMLButtonElement).click();
+    expect(checkbox("s1").checked).toBe(false);
+    expect(handlers.onDeselect).toHaveBeenCalledWith(manySpecies[1]);
+    expect(onSelectionChange).toHaveBeenLastCalledWith(["s0"]);
+  });
+
+  it("replaces the selection with a preset, up to the colour limit", async () => {
+    const many: Species[] = ["lion", "tiger", "cheetah", "puma", "giraffe"].map((id) => ({
+      id,
+      commonName: id,
+      scientificName: id,
+    }));
+    let api: PickerApi | undefined;
+    await renderSpeciesPicker(container, async () => many, handlers, {
+      onReady: (ready) => (api = ready),
+    });
+    toggle("giraffe");
+
+    const bigCats = [...container.querySelectorAll(".preset")].find((button) =>
+      button.textContent?.includes("Big cats"),
+    ) as HTMLButtonElement;
+    bigCats.click();
+    expect(checkbox("giraffe").checked).toBe(false);
+    expect(["lion", "tiger", "cheetah", "puma"].every((id) => checkbox(id).checked)).toBe(
+      true,
+    );
+
+    api?.pick(["giraffe", "lion", "tiger", "cheetah", "puma"]);
+    expect(checkbox("giraffe").checked).toBe(true);
+    expect(checkbox("puma").checked).toBe(false);
   });
 });

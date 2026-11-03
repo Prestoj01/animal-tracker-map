@@ -13,6 +13,7 @@ from typing import Any
 from animal_tracker_pipeline.gbif import GbifClient, GbifError, RequestBudgetExceeded
 from animal_tracker_pipeline.output import write_json_gz
 from animal_tracker_pipeline.species import DEFAULT_PATH, Species, load_species
+from animal_tracker_pipeline.summary import write_summary
 
 logger = logging.getLogger(__name__)
 
@@ -162,6 +163,7 @@ def main() -> int:
         logger.error("%s", error)
         return 1
     logger.info("Made %d requests", client.requests_made)
+    write_summary()
     if failed:
         logger.error("Failed species: %s", ", ".join(failed))
     return 1 if failed else 0
