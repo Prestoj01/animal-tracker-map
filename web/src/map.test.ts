@@ -2,13 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMap } from "./map";
 
 type Handler = (event: { error?: Error }) => void;
-interface FakeFeature {
-  geometry: { type: string };
-  properties: Record<string, string>;
-}
 interface FakeLayer {
   id: string;
-  type: string;
   paint: Record<string, unknown>;
   layout: { visibility: string };
 }
@@ -17,8 +12,7 @@ const mock = vi.hoisted(() => ({
   handlers: new Map<string, (event: { error?: Error }) => void>(),
   layerOrder: [] as string[],
   layers: new Map<string, FakeLayer>(),
-  sources: new Map<string, { data: { features: FakeFeature[] } }>(),
-  images: new Map<string, { width: number }>(),
+  sources: new Map<string, { data: { features: { geometry: { type: string } }[] } }>(),
   failToConstruct: false,
 }));
 
@@ -36,27 +30,8 @@ vi.mock("maplibre-gl", () => ({
         mock.handlers.set(event, rest[0]);
       }
     }
-    addSource(id: string, source: { data: { features: FakeFeature[] } }) {
-      mock.sources.set(id, { data: source.data });
-    }
-    getSource(id: string) {
-      const source = mock.sources.get(id);
-      return (
-        source && {
-          setData(data: { features: FakeFeature[] }) {
-            source.data = data;
-          },
-        }
-      );
-    }
-    getStyle() {
-      return { layers: mock.layerOrder.map((id) => ({ id, type: mock.layers.get(id)?.type })) };
-    }
-    hasImage(id: string) {
-      return mock.images.has(id);
-    }
-    addImage(id: string, image: { width: number }) {
-      mock.images.set(id, image);
+    addSource(id: string, source: { data: { features: { geometry: { type: string } }[] } }) {
+      mock.sources.set(id, source);
     }
     addLayer(layer: FakeLayer, beforeId?: string) {
       mock.layers.set(layer.id, layer);
@@ -102,7 +77,6 @@ beforeEach(() => {
   mock.layers.clear();
   mock.layerOrder = [];
   mock.sources.clear();
-  mock.images.clear();
   mock.failToConstruct = false;
   status = document.createElement("p");
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -164,90 +138,41 @@ describe("createMap", () => {
     expect(status.hidden).toBe(true);
   });
 
-  it("draws sightings as a filled area and tracks as coloured lines", () => {
+  it("adds coloured sightings and tracks, and removes both", () => {
     const map = loadedMap();
 
-    map.showSightings("lion", "Lion", "#123456", [[36.5, -1.5]]);
+    map.showSightings("lion", "Lion", "#123456", [
+      [1, 2],
+      [3, 4],
+    ]);
     map.showTracks("lion", "Lion", "#123456", [
       [
         [1, 2],
         [3, 4],
       ],
     ]);
-
-    expect(mock.layers.get("sightings-regions")?.paint["fill-pattern"]).toEqual([
-      "get",
-      "pattern",
-    ]);
-    const [area] = mock.sources.get("sightings-regions")?.data.features ?? [];
-    expect(area.geometry.type).toBe("MultiPolygon");
-    expect(area.properties.names).toBe("Lion");
-    expect(mock.images.has(area.properties.pattern)).toBe(true);
+    expect(mock.layers.get("sightings-lion")?.paint["circle-color"]).toBe("#123456");
     expect(mock.layers.get("tracks-lion")?.paint["line-color"]).toBe("#123456");
+    expect(mock.sources.get("sightings-lion")?.data.features).toHaveLength(2);
     expect(mock.sources.get("tracks-lion")?.data.features[0].geometry.type).toBe("LineString");
-  });
-
-  it("stripes an area two animals share", () => {
-    const map = loadedMap();
-
-    map.showSightings("lion", "Lion", "#123456", [[36.5, -1.5]]);
-    map.showSightings("leopard", "Leopard", "#654321", [[36.5, -1.5]]);
-
-    const names = mock.sources
-      .get("sightings-regions")
-      ?.data.features.map((feature) => feature.properties.names);
-    expect(names).toEqual(["Lion & Leopard"]);
-    expect(mock.images.size).toBe(2);
-  });
-
-  it("removes a species' area and tracks when it is hidden", () => {
-    const map = loadedMap();
-    map.showSightings("lion", "Lion", "#123456", [[36.5, -1.5]]);
-    map.showSightings("leopard", "Leopard", "#654321", [[50.5, 10.5]]);
-    map.showTracks("lion", "Lion", "#123456", [
-      [
-        [1, 2],
-        [3, 4],
-      ],
-    ]);
 
     map.hideSpecies("lion");
-
-    const names = mock.sources
-      .get("sightings-regions")
-      ?.data.features.map((feature) => feature.properties.names);
-    expect(names).toEqual(["Leopard"]);
-    expect(mock.layers.has("tracks-lion")).toBe(false);
+    expect(mock.layers.size).toBe(0);
+    expect(mock.sources.size).toBe(0);
   });
 
-  it("draws areas and tracks beneath the basemap's place names", () => {
+  it("draws tracks underneath sightings", () => {
     const map = loadedMap();
-    mock.layers.set("place-labels", { id: "place-labels", type: "symbol", paint: {}, layout: { visibility: "visible" } });
-    mock.layerOrder.push("place-labels");
 
+    map.showSightings("lion", "Lion", "#123456", [[1, 2]]);
     map.showTracks("wolf", "Wolf", "#654321", [
       [
         [1, 2],
         [3, 4],
       ],
     ]);
-    map.showSightings("lion", "Lion", "#123456", [[1, 2]]);
 
-    expect(mock.layerOrder).toEqual(["sightings-regions", "tracks-wolf", "place-labels"]);
-  });
-
-  it("draws areas underneath tracks", () => {
-    const map = loadedMap();
-
-    map.showTracks("wolf", "Wolf", "#654321", [
-      [
-        [1, 2],
-        [3, 4],
-      ],
-    ]);
-    map.showSightings("lion", "Lion", "#123456", [[1, 2]]);
-
-    expect(mock.layerOrder).toEqual(["sightings-regions", "tracks-wolf"]);
+    expect(mock.layerOrder).toEqual(["tracks-wolf", "sightings-lion"]);
   });
 
   it("splits tracks that cross the 180° meridian", () => {
@@ -285,7 +210,7 @@ describe("createMap", () => {
     ]);
     map.showSightings("wolf", "Wolf", "#000", [[1, 2]]);
     expect(mock.layers.get("tracks-wolf")?.layout.visibility).toBe("none");
-    expect(mock.layers.get("sightings-regions")?.layout.visibility).toBe("visible");
+    expect(mock.layers.get("sightings-wolf")?.layout.visibility).toBe("visible");
 
     map.setKindVisible("tracks", true);
     expect(mock.layers.get("tracks-lion")?.layout.visibility).toBe("visible");
@@ -298,7 +223,7 @@ describe("createMap", () => {
     expect(mock.layers.size).toBe(0);
 
     mock.handlers.get("load")?.({});
-    expect(mock.layers.has("sightings-regions")).toBe(true);
+    expect(mock.layers.has("sightings-lion")).toBe(true);
   });
 
   it("drops waiting layers if the species is hidden before the map loads", () => {
@@ -314,7 +239,6 @@ describe("createMap", () => {
     map.hideSpecies("lion");
     mock.handlers.get("load")?.({});
 
-    expect(mock.layers.has("tracks-lion")).toBe(false);
-    expect(mock.sources.get("sightings-regions")?.data.features ?? []).toEqual([]);
+    expect(mock.layers.size).toBe(0);
   });
 });

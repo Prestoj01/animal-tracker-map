@@ -155,15 +155,10 @@ button:disabled {
   background: var(--text-secondary);
 }
 
-.switch-key-area {
-  width: 0.625rem;
-  height: 0.625rem;
-  border-radius: 2px;
-  background: repeating-linear-gradient(
-    -45deg,
-    var(--text-secondary) 0 2px,
-    var(--text-muted) 2px 4px
-  );
+.switch-key-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
 }
 
 .switch-key-line {
