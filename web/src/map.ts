@@ -3,11 +3,13 @@ import {
   NavigationControl,
   Popup,
   setWorkerUrl,
-  type LayerSpecification,
+  type GeoJSONSource,
+  type MapLayerMouseEvent,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 // MapLibre ships its worker as a separate file, which the bundler only emits if imported.
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
+import { buildRegions, stripePattern, type RegionInput } from "./regions";
 import type { Point } from "./sightings";
 import { splitAtAntimeridian } from "./tracks";
 
@@ -21,6 +23,7 @@ const FAILED_MESSAGE = "The map could not be loaded. Check your connection and r
 export type LayerKind = "sightings" | "tracks";
 
 export interface SightingsMap {
+  /** Shows where a species has been seen, as a filled area shared with others. */
   showSightings(id: string, name: string, color: string, points: Point[]): void;
   showTracks(id: string, name: string, color: string, tracks: Point[][]): void;
   /** Removes both kinds of layer for a species. */
@@ -31,6 +34,10 @@ export interface SightingsMap {
 function layerId(kind: LayerKind, id: string): string {
   return `${kind}-${id}`;
 }
+
+// All sightings share one layer, because overlaps between animals are drawn
+// differently from areas only one animal uses.
+const REGIONS = layerId("sightings", "regions");
 
 /** Creates the map, reporting its loading and failed states in `status`. */
 export function createMap(container: HTMLElement, status: HTMLElement): SightingsMap {
@@ -88,37 +95,74 @@ export function createMap(container: HTMLElement, status: HTMLElement): Sighting
   // Layers added before the map loads wait here, and can be cancelled by a hide.
   const pending = new Map<string, () => void>();
 
-  const add = (
-    kind: LayerKind,
-    id: string,
-    label: string,
-    features: GeoJSON.Feature[],
-    paint: LayerSpecification["paint"],
-  ) => {
-    const layer = layerId(kind, id);
-    map.addSource(layer, { type: "geojson", data: { type: "FeatureCollection", features } });
-    // Tracks go under every sightings layer, so dots stay on top of lines.
-    const firstSightings = [...layers].find((name) => name.startsWith("sightings-"));
-    map.addLayer(
-      {
-        id: layer,
-        type: kind === "sightings" ? "circle" : "line",
-        source: layer,
-        paint,
-        layout: { visibility: visible[kind] ? "visible" : "none" },
-      } as LayerSpecification,
-      kind === "tracks" ? firstSightings : undefined,
-    );
-    layers.add(layer);
-    // Naming the species on hover means identity never depends on colour alone.
+  const addHoverLabel = (layer: string, label: (event: MapLayerMouseEvent) => string) => {
+    // Naming the animals on hover means identity never depends on colour alone.
     map.on("mousemove", layer, (event) => {
       map.getCanvas().style.cursor = "pointer";
-      popup.setLngLat(event.lngLat).setText(label).addTo(map);
+      popup.setLngLat(event.lngLat).setText(label(event)).addTo(map);
     });
     map.on("mouseleave", layer, () => {
       map.getCanvas().style.cursor = "";
       popup.remove();
     });
+  };
+
+  // Our layers go beneath the basemap's place names, so those stay readable.
+  const firstLabelLayer = () => map.getStyle().layers.find((layer) => layer.type === "symbol")?.id;
+
+  const addTracks = (id: string, label: string, color: string, features: GeoJSON.Feature[]) => {
+    const layer = layerId("tracks", id);
+    map.addSource(layer, { type: "geojson", data: { type: "FeatureCollection", features } });
+    map.addLayer(
+      {
+        id: layer,
+        type: "line",
+        source: layer,
+        paint: { "line-color": color, "line-width": 2, "line-opacity": 0.9, "line-blur": 0.5 },
+        layout: { visibility: visible.tracks ? "visible" : "none" },
+      },
+      firstLabelLayer(),
+    );
+    layers.add(layer);
+    addHoverLabel(layer, () => label);
+  };
+
+  const regionInputs = new Map<string, RegionInput>();
+
+  const drawRegions = () => {
+    const { features, patterns } = buildRegions([...regionInputs.values()]);
+    for (const [name, colors] of patterns) {
+      if (!map.hasImage(name)) {
+        // Twice the pixels for a crisp pattern on high-density screens.
+        map.addImage(name, stripePattern(colors), { pixelRatio: 2 });
+      }
+    }
+    const data: GeoJSON.FeatureCollection = { type: "FeatureCollection", features };
+    const source = map.getSource<GeoJSONSource>(REGIONS);
+    if (source) {
+      source.setData(data);
+      return;
+    }
+    map.addSource(REGIONS, { type: "geojson", data });
+    // Areas go under every track, so lines stay readable on top of them.
+    const firstTracks = [...layers].find((name) => name.startsWith("tracks-"));
+    map.addLayer(
+      {
+        id: REGIONS,
+        type: "fill",
+        source: REGIONS,
+        paint: {
+          "fill-pattern": ["get", "pattern"],
+          "fill-opacity": 0.55,
+          // Antialiasing draws faint seams between neighbouring cells.
+          "fill-antialias": false,
+        },
+        layout: { visibility: visible.sightings ? "visible" : "none" },
+      },
+      firstTracks ?? firstLabelLayer(),
+    );
+    layers.add(REGIONS);
+    addHoverLabel(REGIONS, (event) => String(event.features?.[0]?.properties.names ?? ""));
   };
 
   const whenReady = (key: string, run: () => void) => {
@@ -137,23 +181,8 @@ export function createMap(container: HTMLElement, status: HTMLElement): Sighting
 
   return {
     showSightings(id, name, color, points) {
-      const features = points.map(
-        (coordinates): GeoJSON.Feature => ({
-          type: "Feature",
-          properties: {},
-          geometry: { type: "Point", coordinates },
-        }),
-      );
-      whenReady(layerId("sightings", id), () =>
-        add("sightings", id, name, features, {
-          "circle-color": color,
-          "circle-radius": 4,
-          "circle-opacity": 0.9,
-          // A dark ring keeps overlapping dots apart.
-          "circle-stroke-color": "#0c0c0c",
-          "circle-stroke-width": 1,
-        }),
-      );
+      regionInputs.set(id, { id, name, color, points });
+      whenReady(REGIONS, drawRegions);
     },
     showTracks(id, name, color, tracks) {
       const features = tracks.flatMap(splitAtAntimeridian).map(
@@ -164,22 +193,18 @@ export function createMap(container: HTMLElement, status: HTMLElement): Sighting
         }),
       );
       whenReady(layerId("tracks", id), () =>
-        add("tracks", id, `${name} (tracked animal)`, features, {
-          "line-color": color,
-          "line-width": 2,
-          "line-opacity": 0.9,
-          "line-blur": 0.5,
-        }),
+        addTracks(id, `${name} (tracked animal)`, color, features),
       );
     },
     hideSpecies(id) {
-      for (const kind of ["sightings", "tracks"] as const) {
-        const layer = layerId(kind, id);
-        pending.delete(layer);
-        if (layers.delete(layer)) {
-          map.removeLayer(layer);
-          map.removeSource(layer);
-        }
+      const tracks = layerId("tracks", id);
+      pending.delete(tracks);
+      if (layers.delete(tracks)) {
+        map.removeLayer(tracks);
+        map.removeSource(tracks);
+      }
+      if (regionInputs.delete(id)) {
+        whenReady(REGIONS, drawRegions);
       }
       popup.remove();
     },
