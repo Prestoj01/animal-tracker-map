@@ -3,17 +3,33 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#121212" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>"
+    />
     <title>Animal Tracker Map</title>
   </head>
   <body>
     <aside class="sidebar">
-      <h1>Animal Tracker Map</h1>
+      <header class="brand">
+        <h1><span aria-hidden="true">🐾</span> Animal Tracker</h1>
+        <p>Where the world's best-loved animals live and roam</p>
+      </header>
       <fieldset id="layer-toggles" class="layer-toggles">
-        <legend>Show</legend>
-        <label><input type="checkbox" value="sightings" checked /> Sightings (dots)</label>
-        <label><input type="checkbox" value="tracks" checked /> Migration tracks (lines)</label>
+        <legend class="visually-hidden">Show on the map</legend>
+        <label class="switch">
+          <input type="checkbox" value="sightings" checked />
+          <span class="switch-track" aria-hidden="true"></span>
+          <span>Sightings <span class="switch-key switch-key-dot" aria-hidden="true"></span></span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" value="tracks" checked />
+          <span class="switch-track" aria-hidden="true"></span>
+          <span>Migration tracks <span class="switch-key switch-key-line" aria-hidden="true"></span></span>
+        </label>
       </fieldset>
-      <div id="species-picker"></div>
+      <div id="species-picker" class="species-picker"></div>
       <section id="sources" class="sources" hidden>
         <h2>Track data</h2>
         <ul></ul>
@@ -21,8 +37,8 @@
     </aside>
     <main class="map-area">
       <div id="map"></div>
-      <p id="map-status" class="map-status" role="status" hidden></p>
-      <ul id="legend" class="legend" aria-label="Species on the map" hidden></ul>
+      <p id="map-status" class="map-status panel" role="status" hidden></p>
+      <ul id="legend" class="legend panel" aria-label="Animals on the map" hidden></ul>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

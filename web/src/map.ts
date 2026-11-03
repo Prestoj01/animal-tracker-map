@@ -14,7 +14,7 @@ import { splitAtAntimeridian } from "./tracks";
 setWorkerUrl(workerUrl);
 
 // OpenFreeMap needs no API key or account, which keeps the map at $0.
-const STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
+const STYLE_URL = "https://tiles.openfreemap.org/styles/dark";
 const LOAD_TIMEOUT_MS = 15000;
 const FAILED_MESSAGE = "The map could not be loaded. Check your connection and reload the page.";
 
@@ -148,8 +148,9 @@ export function createMap(container: HTMLElement, status: HTMLElement): Sighting
         add("sightings", id, name, features, {
           "circle-color": color,
           "circle-radius": 4,
-          "circle-opacity": 0.85,
-          "circle-stroke-color": "#fcfcfb",
+          "circle-opacity": 0.9,
+          // A dark ring keeps overlapping dots apart.
+          "circle-stroke-color": "#0c0c0c",
           "circle-stroke-width": 1,
         }),
       );
@@ -166,7 +167,8 @@ export function createMap(container: HTMLElement, status: HTMLElement): Sighting
         add("tracks", id, `${name} (tracked animal)`, features, {
           "line-color": color,
           "line-width": 2,
-          "line-opacity": 0.8,
+          "line-opacity": 0.9,
+          "line-blur": 0.5,
         }),
       );
     },

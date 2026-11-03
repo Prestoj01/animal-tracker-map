@@ -1,8 +1,22 @@
+:root {
+  color-scheme: dark;
+  --page: #0c0c0c;
+  --surface: #161615;
+  --surface-raised: #1f1f1e;
+  --border: rgb(255 255 255 / 10%);
+  --text: #f0efec;
+  --text-secondary: #c3c2b7;
+  --text-muted: #898781;
+  --accent: #3987e5;
+  --radius: 0.75rem;
+}
+
 html,
 body {
   height: 100%;
   margin: 0;
-  color: #0b0b0b;
+  background: var(--page);
+  color: var(--text);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
@@ -10,110 +24,310 @@ body {
   display: flex;
 }
 
-.sidebar {
-  flex: 0 0 18rem;
-  box-sizing: border-box;
-  overflow-y: auto;
-  padding: 0.75rem 1rem;
-  background: #fcfcfb;
+button {
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
 }
 
-.sidebar h1 {
-  margin: 0 0 0.75rem;
-  font-size: 1.25rem;
+button:hover:not(:disabled) {
+  border-color: var(--text-muted);
 }
+
+button:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Sidebar */
+
+.sidebar {
+  display: flex;
+  flex: 0 0 21rem;
+  flex-direction: column;
+  gap: 1rem;
+  box-sizing: border-box;
+  overflow-y: auto;
+  padding: 1.25rem 1rem;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.brand p {
+  margin: 0.25rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+}
+
+/* Layer switches */
 
 .layer-toggles {
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
-  margin: 0 0 0.75rem;
-  padding: 0;
-  border: 0;
-}
-
-.layer-toggles legend {
-  padding: 0;
-  color: #52514e;
-  font-size: 0.875rem;
-}
-
-.sources {
-  margin-top: 1rem;
-  color: #52514e;
-  font-size: 0.75rem;
-}
-
-.sources h2 {
-  margin: 0 0 0.25rem;
-  color: #0b0b0b;
-  font-size: 0.875rem;
-}
-
-.sources ul {
+  gap: 0.5rem;
   margin: 0;
-  padding-left: 1rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
 }
 
-.sources li {
-  margin-bottom: 0.375rem;
-  overflow-wrap: anywhere;
+.switch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.875rem;
+  cursor: pointer;
 }
 
-#species-picker fieldset {
-  margin: 0 0 0.75rem;
+.switch input {
+  position: absolute;
+  opacity: 0;
+}
+
+.switch-track {
+  position: relative;
+  flex: none;
+  width: 2rem;
+  height: 1.125rem;
+  border-radius: 999px;
+  background: #383835;
+  transition: background 150ms;
+}
+
+.switch-track::after {
+  position: absolute;
+  top: 0.1875rem;
+  left: 0.1875rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--text);
+  content: "";
+  transition: transform 150ms;
+}
+
+.switch input:checked + .switch-track {
+  background: var(--accent);
+}
+
+.switch input:checked + .switch-track::after {
+  transform: translateX(0.875rem);
+}
+
+.switch input:focus-visible + .switch-track {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.switch-key {
+  display: inline-block;
+  margin-left: 0.25rem;
+  vertical-align: middle;
+  background: var(--text-secondary);
+}
+
+.switch-key-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+.switch-key-line {
+  width: 1rem;
+  height: 2px;
+}
+
+/* Animal cards */
+
+.species-picker fieldset {
+  margin: 0;
   padding: 0;
   border: 0;
 }
 
-#species-picker legend {
+.species-picker legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 0.625rem;
   padding: 0;
-  color: #52514e;
-  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
-.species-list {
-  margin: 0.25rem 0 0;
+.clear-button {
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.species-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: 0.5rem;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.species-list li {
+.species-card {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0 0.5rem;
-  padding: 0.125rem 0;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  transition:
+    border-color 150ms,
+    box-shadow 150ms,
+    transform 150ms;
 }
 
-.species-list label {
+.species-card label {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.25rem;
+  padding: 0.75rem 0.5rem 0.25rem;
+  text-align: center;
   cursor: pointer;
 }
 
-.species-list input:disabled ~ .species-name {
-  color: #898781;
+.species-card:hover:not(:has(input:disabled)) {
+  border-color: var(--text-muted);
+  transform: translateY(-1px);
+}
+
+.species-card:has(input:checked) {
+  border-color: var(--series);
+  box-shadow:
+    0 0 0 1px var(--series),
+    0 0 18px -4px var(--series);
+}
+
+.species-card:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.species-card:has(input:disabled) {
+  opacity: 0.4;
+}
+
+.species-card:has(input:disabled) label {
+  cursor: not-allowed;
+}
+
+.card-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.species-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.species-card .swatch {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
 }
 
 .species-status {
-  color: #52514e;
-  font-size: 0.75rem;
+  min-height: 1rem;
+  padding: 0 0.5rem 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.6875rem;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.species-status button {
+  margin-top: 0.25rem;
 }
 
 .swatch {
   display: inline-block;
   flex: none;
-  width: 0.75rem;
-  height: 0.75rem;
+  width: 0.625rem;
+  height: 0.625rem;
   border-radius: 50%;
 }
 
 .picker-message {
   margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
 }
+
+/* Citations */
+
+.sources {
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+}
+
+.sources h2 {
+  margin: 0 0 0.375rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sources ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sources li {
+  margin-bottom: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.sources strong,
+.sources a {
+  color: var(--text-secondary);
+}
+
+/* Map and its overlays */
 
 .map-area {
   position: relative;
@@ -126,50 +340,109 @@ body {
   inset: 0;
 }
 
+.panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgb(22 22 21 / 88%);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 40%);
+}
+
 .map-status {
   position: absolute;
   top: 1rem;
   left: 50%;
   max-width: 80%;
   margin: 0;
-  padding: 0.5rem 1rem;
-  border-radius: 0.25rem;
-  background: #fff;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 30%);
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
   transform: translateX(-50%);
 }
 
 .legend {
   position: absolute;
   bottom: 2.5rem;
-  left: 0.75rem;
+  left: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
   margin: 0;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.25rem;
-  background: #fff;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 30%);
-  font-size: 0.875rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
   list-style: none;
 }
 
 .legend li {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.5rem;
 }
 
-/* The hidden attribute loses to the display rules of positioned elements otherwise. */
+/* MapLibre's own controls, restyled for the dark theme. */
+
+.maplibregl-ctrl-group {
+  border: 1px solid var(--border);
+  background: var(--surface-raised) !important;
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top-color: var(--border) !important;
+}
+
+.maplibregl-ctrl-group .maplibregl-ctrl-icon {
+  filter: invert(1);
+}
+
+.maplibregl-ctrl-attrib {
+  background: rgb(22 22 21 / 80%) !important;
+  color: var(--text-muted);
+}
+
+.maplibregl-ctrl-attrib a {
+  color: var(--text-secondary) !important;
+}
+
+.maplibregl-ctrl-attrib-button {
+  filter: invert(1);
+}
+
+.maplibregl-popup-content {
+  padding: 0.375rem 0.625rem;
+  border-radius: 0.5rem;
+  background: var(--surface-raised);
+  color: var(--text);
+  font-size: 0.8125rem;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 50%);
+}
+
+.maplibregl-popup-tip {
+  display: none;
+}
+
+/* The hidden attribute loses to the display rules above otherwise. */
 [hidden] {
   display: none !important;
 }
 
 @media (max-width: 40rem) {
   body {
-    flex-direction: column;
+    flex-direction: column-reverse;
   }
 
   .sidebar {
     flex: 0 0 auto;
-    max-height: 40%;
+    max-height: 45%;
+    border-top: 1px solid var(--border);
+    border-right: 0;
+  }
+
+  .species-grid {
+    grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
   }
 }

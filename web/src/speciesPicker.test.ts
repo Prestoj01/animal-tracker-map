@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Species } from "./species";
+import { speciesIcon } from "./speciesIcons";
 import { renderSpeciesPicker, SERIES_COLORS } from "./speciesPicker";
 
 const manySpecies: Species[] = Array.from({ length: 10 }, (_, index) => ({
@@ -46,18 +47,18 @@ describe("renderSpeciesPicker", () => {
       () => new Promise((r) => (resolve = r)),
       handlers,
     );
-    expect(container.textContent).toContain("Loading species");
+    expect(container.textContent).toContain("Loading animals");
 
     resolve(manySpecies);
     await rendering;
-    expect(container.textContent).not.toContain("Loading species");
+    expect(container.textContent).not.toContain("Loading animals");
     expect(container.querySelectorAll("input[type=checkbox]")).toHaveLength(10);
   });
 
   it("shows an empty state", async () => {
     await renderSpeciesPicker(container, async () => [], handlers);
 
-    expect(container.textContent).toContain("No species available");
+    expect(container.textContent).toContain("No animals available");
     expect(container.querySelector("input")).toBeNull();
   });
 
@@ -68,7 +69,7 @@ describe("renderSpeciesPicker", () => {
       .mockResolvedValueOnce(manySpecies);
 
     await renderSpeciesPicker(container, load, handlers);
-    expect(container.textContent).toContain("Could not load species");
+    expect(container.textContent).toContain("Could not load animals");
 
     container.querySelector("button")?.click();
     await vi.waitFor(() => expect(container.querySelector("input")).not.toBeNull());
@@ -102,8 +103,12 @@ describe("renderSpeciesPicker", () => {
   it("stops at the colour limit and frees up after a deselect", async () => {
     await renderSpeciesPicker(container, async () => manySpecies, handlers);
 
+    expect(container.textContent).toContain(`pick up to ${SERIES_COLORS.length}`);
     SERIES_COLORS.forEach((_, index) => toggle(`s${index}`));
     expect(checkbox("s9").disabled).toBe(true);
+    expect(container.textContent).toContain(
+      `${SERIES_COLORS.length} of ${SERIES_COLORS.length} picked`,
+    );
     expect(checkbox("s0").disabled).toBe(false);
 
     toggle("s0");
@@ -123,6 +128,17 @@ describe("renderSpeciesPicker", () => {
 
     toggle("s0");
     expect(container.textContent).not.toContain("Could not load");
+  });
+
+  it("shows each species as a card with an icon, outlined in its colour when picked", async () => {
+    await renderSpeciesPicker(container, async () => manySpecies, handlers);
+
+    const card = checkbox("s0").closest(".species-card") as HTMLElement;
+    expect(card.querySelector(".card-icon")?.textContent).toBe(speciesIcon("s0"));
+    toggle("s0");
+    expect(card.style.getPropertyValue("--series")).toBe(SERIES_COLORS[0]);
+    toggle("s0");
+    expect(card.style.getPropertyValue("--series")).toBe("");
   });
 
   it("clears the whole selection", async () => {
