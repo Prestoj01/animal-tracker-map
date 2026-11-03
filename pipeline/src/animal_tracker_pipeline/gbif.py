@@ -1,4 +1,7 @@
-"""Minimal GBIF API client with timeouts, retries, pacing and a request budget."""
+"""Minimal JSON API client with timeouts, retries, pacing and a request budget.
+
+Used for GBIF, and for Wikipedia and Wikimedia Commons in the profiles step.
+"""
 
 import json
 import logging
@@ -28,14 +31,16 @@ class RequestBudgetExceeded(GbifError):
     """Hard stop: the run would make more requests than we allow ourselves."""
 
 
-class GbifClient:
+class JsonClient:
     def __init__(
         self,
+        base_url: str,
         opener: Callable[..., Any] = urllib.request.urlopen,
         sleep: Callable[[float], None] = time.sleep,
         max_requests: int = MAX_REQUESTS,
         min_interval: float = MIN_INTERVAL_SECONDS,
     ) -> None:
+        self._base_url = base_url
         self._opener = opener
         self._sleep = sleep
         self._max_requests = max_requests
@@ -43,7 +48,7 @@ class GbifClient:
         self.requests_made = 0
 
     def get(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
-        url = f"{BASE_URL}{path}?{urllib.parse.urlencode(params, doseq=True)}"
+        url = f"{self._base_url}{path}?{urllib.parse.urlencode(params, doseq=True)}"
         request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
         for attempt in range(RETRIES + 1):
             if self.requests_made >= self._max_requests:
@@ -66,3 +71,8 @@ class GbifClient:
                 logger.warning("Retrying %s in %.0f s: %s", url, delay, failure)
                 self._sleep(delay)
         raise GbifError(f"Giving up on {url}: {failure}")
+
+
+class GbifClient(JsonClient):
+    def __init__(self, **options: Any) -> None:
+        super().__init__(BASE_URL, **options)

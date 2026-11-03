@@ -1,6 +1,8 @@
 import { createBottomSheet } from "./bottomSheet";
 import { PRESETS } from "./catalog";
 import { createMap, type LayerKind } from "./map";
+import { createProfilePanel } from "./profilePanel";
+import { loadProfiles } from "./profiles";
 import { loadSightings } from "./sightings";
 import { createSightingsController } from "./sightingsController";
 import { loadSpecies } from "./species";
@@ -18,6 +20,22 @@ function byId(id: string): HTMLElement {
 }
 
 const map = createMap(byId("map"), byId("map-status"));
+
+// Both are shared by the cards and the profile panel, so each loads once.
+function once<T>(load: () => Promise<T>): () => Promise<T> {
+  let request: Promise<T> | undefined;
+  return () => {
+    request ??= load().catch((error: unknown) => {
+      request = undefined;
+      throw error;
+    });
+    return request;
+  };
+}
+const summary = once(loadSummary);
+const profiles = createProfilePanel(byId("profile"), once(loadProfiles), () =>
+  summary().catch(() => null),
+);
 
 for (const input of byId("layer-toggles").querySelectorAll("input")) {
   input.addEventListener("change", () => {
@@ -67,7 +85,14 @@ void renderSpeciesPicker(
     { legend: byId("legend"), sources: byId("sources") },
   ),
   {
-    loadSummary,
+    loadSummary: summary,
+    onShowProfile: (species) => {
+      profiles.open(species);
+      // On phones the drawer would cover the profile.
+      if (isPhone()) {
+        sheet.set("peek");
+      }
+    },
     onSelectionChange: (ids) => {
       welcome.hidden = ids.length > 0;
     },

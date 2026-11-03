@@ -243,4 +243,17 @@ describe("renderSpeciesPicker", () => {
     expect(checkbox("giraffe").checked).toBe(true);
     expect(checkbox("puma").checked).toBe(false);
   });
+
+  it("asks for a profile from a card or a tray chip without picking", async () => {
+    const onShowProfile = vi.fn();
+    await renderSpeciesPicker(container, async () => manySpecies, handlers, { onShowProfile });
+
+    (container.querySelector('[aria-label="About Species 2"]') as HTMLButtonElement).click();
+    expect(onShowProfile).toHaveBeenLastCalledWith(manySpecies[2]);
+    expect(checkbox("s2").checked).toBe(false);
+
+    toggle("s0");
+    (container.querySelector(".chip-name") as HTMLButtonElement).click();
+    expect(onShowProfile).toHaveBeenLastCalledWith(manySpecies[0]);
+  });
 });

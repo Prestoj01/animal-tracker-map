@@ -26,6 +26,8 @@ export interface PickerOptions {
   onSelectionChange?: (ids: string[]) => void;
   /** Called once the cards are shown, with a way to change the selection. */
   onReady?: (api: PickerApi) => void;
+  /** Called when the reader asks to learn more about a species. */
+  onShowProfile?: (species: Species) => void;
 }
 
 export interface PickerApi {
@@ -101,7 +103,11 @@ function createBadges(counts: Summary[string] | undefined): HTMLElement | null {
   return badges;
 }
 
-function createCard(species: Species, counts: Summary[string] | undefined): Card {
+function createCard(
+  species: Species,
+  counts: Summary[string] | undefined,
+  onShowProfile: (species: Species) => void,
+): Card {
   const item = element("li", "species-card");
 
   // The checkbox stays in the page for keyboards and screen readers; the card is
@@ -125,7 +131,14 @@ function createCard(species: Species, counts: Summary[string] | undefined): Card
 
   const status = element("span", "species-status");
   status.setAttribute("aria-live", "polite");
-  item.append(label, status);
+
+  // Outside the label, so asking about an animal doesn't also pick it.
+  const info = element("button", "card-info", "i");
+  info.type = "button";
+  info.setAttribute("aria-label", `About ${species.commonName}`);
+  info.addEventListener("click", () => onShowProfile(species));
+
+  item.append(label, info, status);
   return { item, checkbox, swatch, status, species };
 }
 
@@ -135,11 +148,12 @@ function showPicker(
   summary: Summary | null,
   handlers: PickerHandlers,
   onSelectionChange: (ids: string[]) => void,
+  onShowProfile: (species: Species) => void,
 ): PickerApi {
   // The colour stays with the species until it is deselected, so changing the
   // selection never repaints what is already on the map. Map order is pick order.
   const colorOf = new Map<string, string>();
-  const cards = species.map((entry) => createCard(entry, summary?.[entry.id]));
+  const cards = species.map((entry) => createCard(entry, summary?.[entry.id], onShowProfile));
   const cardOf = new Map(cards.map((card) => [card.species.id, card]));
 
   const fieldset = document.createElement("fieldset");
@@ -184,7 +198,11 @@ function showPicker(
           deselect(card);
           refresh();
         });
-        chip.append(dot, `${speciesIcon(id)} ${card.species.commonName}`, remove);
+        const name = element("button", "chip-name", `${speciesIcon(id)} ${card.species.commonName}`);
+        name.type = "button";
+        name.title = `About ${card.species.commonName}`;
+        name.addEventListener("click", () => onShowProfile(card.species));
+        chip.append(dot, name, remove);
         return chip;
       }),
     );
@@ -289,7 +307,12 @@ export async function renderSpeciesPicker(
   handlers: PickerHandlers,
   options: PickerOptions = {},
 ): Promise<void> {
-  const { loadSummary, onSelectionChange = () => {}, onReady = () => {} } = options;
+  const {
+    loadSummary,
+    onSelectionChange = () => {},
+    onReady = () => {},
+    onShowProfile = () => {},
+  } = options;
   showMessage(container, "Loading animals…");
   // Badges are a bonus: without the summary, the cards still work.
   const summaryRequest = loadSummary?.().catch((error: unknown) => {
@@ -303,7 +326,9 @@ export async function renderSpeciesPicker(
       return;
     }
     const summary = (await summaryRequest) ?? null;
-    onReady(showPicker(container, species, summary, handlers, onSelectionChange));
+    onReady(
+      showPicker(container, species, summary, handlers, onSelectionChange, onShowProfile),
+    );
   } catch (error) {
     console.error("Could not load species", error);
     const message = showMessage(container, "Could not load animals. ");
