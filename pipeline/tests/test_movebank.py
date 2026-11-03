@@ -1,3 +1,4 @@
+import http.client
 import io
 import urllib.error
 
@@ -88,6 +89,17 @@ def test_stops_hard_at_the_download_limit():
     client, _ = client_returning(FakeResponse("a\n" + "1\n" * 1000), max_bytes=100)
 
     with pytest.raises(MovebankLimitExceeded):
+        list(client.rows({}))
+
+
+def test_a_dropped_connection_is_a_movebank_error():
+    class Dropped(FakeResponse):
+        def read(self, size=-1):
+            raise http.client.IncompleteRead(b"partial")
+
+    client, _ = client_returning(Dropped(""))
+
+    with pytest.raises(MovebankError, match="interrupted"):
         list(client.rows({}))
 
 

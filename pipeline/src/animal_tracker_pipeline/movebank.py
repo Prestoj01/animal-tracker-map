@@ -5,6 +5,7 @@ Movebank allows one request at a time per IP, so calls are strictly sequential.
 
 import base64
 import csv
+import http.client
 import io
 import logging
 import os
@@ -134,7 +135,7 @@ class MovebankClient:
             text = io.TextIOWrapper(limited, encoding="utf-8", newline="")
             try:
                 yield from csv.DictReader(text)
-            except (OSError, TimeoutError) as error:
+            except (OSError, TimeoutError, http.client.HTTPException) as error:
                 raise MovebankError(f"Download interrupted: {error}") from error
         finally:
             response.close()

@@ -36,20 +36,20 @@ EVENT_ATTRIBUTES = (
 )
 
 # One reviewed study per species; see docs/species-selection.md. Species not
-# listed have no usable study. The Asian elephant study's licence asks users to
-# contact its investigators first, so it is left out.
+# listed have no downloadable study.
 TRACK_STUDIES: dict[str, int] = {
     "lion": 3809257699,
+    "cheetah": 1260886163,
+    "puma": 1674593154,
     "african-bush-elephant": 605129389,
     "african-forest-elephant": 1818825,
-    "leopard": 1283461962,
-    "cheetah": 1260886163,
-    "grey-wolf": 492444603,
-    "jaguar": 19411459,
     "brown-bear": 14261492,
-    "plains-zebra": 259966228,
+    "grey-wolf": 492444603,
+    "wildebeest": 208413731,
+    "caribou": 5808436651,
     "humpback-whale": 3030068329,
     "blue-whale": 650188969,
+    "whale-shark": 1153270750,
     "green-sea-turtle": 3267664208,
     "emperor-penguin": 1322558986,
     "bald-eagle": 20873986,

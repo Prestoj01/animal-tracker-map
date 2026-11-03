@@ -1,38 +1,39 @@
 # Species selection
 
-No definitive ranking of the world's most popular animals exists, so the list has two parts:
+The 24 species are the owner's favourites, plus four well-tracked additions: grey wolf, wildebeest, caribou and snowy owl. Where a favourite named a group, the species with the best data was chosen:
 
-- **The first 13 species** are the top 10 from Courchamp et al. 2018, ["The paradoxical extinction of the most charismatic animals"](https://doi.org/10.1371/journal.pbio.2003997). Elephants and gorillas each count as one rank but cover several species. The study measures Western audiences.
-- **The other 12 are a judgement call:** well-known animals, favouring those with usable tracking data.
+| Favourite   | Species                                    | Why                                                       |
+| ----------- | ------------------------------------------ | --------------------------------------------------------- |
+| Elephants   | African bush and African forest elephant   | The Asian elephant study's licence asks users to contact its investigators first |
+| Rhinos      | White rhino                                | No rhino species has downloadable tracking data          |
+| Sharks      | Whale shark and great white shark          | Whale shark has tracks; great white doesn't, but is the best-known shark |
+| Whales      | Humpback and blue whale                    | Both have tracks                                          |
+| Penguins    | Emperor penguin                            | Has tracks                                                |
+| Sea turtles | Green sea turtle                           | Most tracked turtle                                       |
+| Panthers    | Puma, which includes the Florida panther   | The most tracking data of the animals called "panther"   |
+| Gorilla     | Western and eastern gorilla                | Neither has tracks                                        |
 
-Availability was checked on 2026-11-01. Sightings are GBIF records with coordinates. Each study is a Movebank study marked downloadable for our account, generally the largest for that species, preferring single-species studies and standard licences. Its data has not been downloaded yet, and a licence may still need accepting. IUCN status has not been checked.
+## Tracking data
 
-| Species | GBIF sightings | Movebank study ID | Licence | Locations | Animals |
-| --- | ---: | --- | --- | ---: | ---: |
-| Tiger | 5,739 | none | | | |
-| Lion | 17,100 | 3809257699 | CC_BY | 241,760 | 13 |
-| African bush elephant | 25,973 | 605129389 | CC_BY_NC | 2,930,263 | 15 |
-| African forest elephant | 1,080 | 1818825 | CC_BY | 37,530 | 36 |
-| Asian elephant | 11,845 | 56232621 (not used: its licence asks users to contact the investigators first) | CUSTOM | 446,572 | 2 |
-| Giraffe | 5,611 | none | | | |
-| Leopard | 10,214 | 1283461962 | CC_0 | 1,840 | 16 |
-| Giant panda | 67 | none | | | |
-| Cheetah | 9,053 | 1260886163 | CC_0 | 1,182 | 1 |
-| Polar bear | 6,760 | none | | | |
-| Grey wolf | 226,568 | 492444603 | CC_0 | 239,194 | 46 |
-| Western gorilla | 627 | none | | | |
-| Eastern gorilla | 967 | none | | | |
-| Chimpanzee | 4,448 | none | | | |
-| Koala | 452,783 | none | | | |
-| Orca | 41,203 | none | | | |
-| Jaguar | 143,479 | 19411459 | CC_0 | 42,912 | 13 |
-| Brown bear | 52,784 | 14261492 | CC_BY_NC | 1,898 | 23 |
-| Plains zebra | 25,148 | 259966228 (11 taxa, needs filtering) | CC_0 | 569,474 | 103 |
-| Humpback whale | 525,686 | 3030068329 | CC_BY | 30,029 | 50 |
-| Blue whale | 30,357 | 650188969 | CC_BY | 15,545 | 143 |
-| Green sea turtle | 279,514 | 3267664208 | CC_BY | 55,411 | 33 |
-| Emperor penguin | 131,586 | 1322558986 | CC_BY | 120,983 | 56 |
-| Bald eagle | 7,265,672 | 20873986 | CC_BY | 158,878 | 5 (4 drawn) |
-| Snowy owl | 267,100 | 12112706 | CC_BY | 33,492 | 33 |
+Checked against Movebank on 2026-11-02. Each study is downloadable for our account, with a standard licence. A study's licence must still be accepted on Movebank before its data can be downloaded.
 
-Species marked `none` will show sightings with an empty state for tracks.
+| Species                 | Movebank study | Licence  | Locations | Animals | Notes                                   |
+| ----------------------- | -------------- | -------- | --------: | ------: | --------------------------------------- |
+| Lion                    | 3809257699     | CC BY    |   241,760 |      13 |                                         |
+| Cheetah                 | 1260886163     | CC0      |     1,182 |       1 | Thin: one animal                        |
+| Puma                    | 1674593154     | CC BY-NC |   105,438 |      47 | Olympic Peninsula, USA                  |
+| African bush elephant   | 605129389      | CC BY-NC | 2,930,263 |      15 |                                         |
+| African forest elephant | 1818825        | CC BY    |    37,530 |      36 |                                         |
+| Brown bear              | 14261492       | CC BY-NC |     1,898 |      23 | Thin: few locations, 1993–1999          |
+| Grey wolf               | 492444603      | CC0      |   239,194 |      46 |                                         |
+| Wildebeest              | 208413731      | CC BY    |   276,706 |      36 | Resident Kenyan herds, not the Serengeti migration |
+| Caribou                 | 5808436651     | CC0      |    47,389 |      49 | Nelchina herd, Alaska                   |
+| Humpback whale          | 3030068329     | CC BY    |    30,029 |      50 |                                         |
+| Blue whale              | 650188969      | CC BY    |    15,545 |     143 |                                         |
+| Whale shark             | 1153270750     | CC BY    |     3,382 |      41 | Gulf of Mexico                          |
+| Green sea turtle        | 3267664208     | CC BY    |    55,411 |      33 |                                         |
+| Emperor penguin         | 1322558986     | CC BY    |   120,983 |      56 |                                         |
+| Bald eagle              | 20873986       | CC BY    |   158,878 |       5 | 4 drawn: one tag had no animal assigned |
+| Snowy owl               | 12112706       | CC BY    |    33,492 |      33 |                                         |
+
+No downloadable study exists for tiger, giraffe, white rhino, both gorillas, giant panda, polar bear or great white shark. Tracking data for animals targeted by poachers is often kept private. These species show sightings, and "no tracks" in place of tracks.
