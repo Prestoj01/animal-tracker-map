@@ -575,16 +575,99 @@ button:disabled {
   display: none !important;
 }
 
+.sheet-handle {
+  display: none;
+}
+
 @media (max-width: 40rem) {
   body {
-    flex-direction: column-reverse;
+    display: block;
   }
 
+  .map-area {
+    position: fixed;
+    inset: 0;
+  }
+
+  /* The sidebar becomes a drawer that slides up over the map. */
   .sidebar {
-    flex: 0 0 auto;
-    max-height: 45%;
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+    height: 90dvh;
+    padding-top: 0;
     border-top: 1px solid var(--border);
     border-right: 0;
+    border-radius: 1rem 1rem 0 0;
+    box-shadow: 0 -8px 24px rgb(0 0 0 / 50%);
+    transform: translateY(calc(90dvh - var(--sheet-visible)));
+    transition: transform 250ms ease-out;
+  }
+
+  .sidebar[data-sheet="peek"] {
+    --sheet-visible: 120px;
+
+    overflow: hidden;
+  }
+
+  .sidebar[data-sheet="half"] {
+    --sheet-visible: 50dvh;
+  }
+
+  .sidebar[data-sheet="full"] {
+    --sheet-visible: 90dvh;
+  }
+
+  .sidebar[data-dragging] {
+    --sheet-visible: var(--sheet-drag);
+
+    transition: none;
+  }
+
+  .sheet-handle {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: calc(100% + 2rem);
+    height: 1.75rem;
+    margin: 0 -1rem;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: var(--surface);
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .sheet-handle span {
+    width: 2.5rem;
+    height: 0.3125rem;
+    border-radius: 999px;
+    background: var(--text-muted);
+  }
+
+  /* On phones the drawer replaces the desktop collapse button. */
+  .sidebar-toggle {
+    display: none;
+  }
+
+  .sidebar-collapsed .sidebar {
+    display: flex;
+  }
+
+  .welcome {
+    top: 30%;
+  }
+
+  .legend {
+    top: 0.75rem;
+    bottom: auto;
+    left: 0.75rem;
   }
 
   .species-grid {

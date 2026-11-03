@@ -1,3 +1,4 @@
+import { createBottomSheet } from "./bottomSheet";
 import { PRESETS } from "./catalog";
 import { createMap, type LayerKind } from "./map";
 import { loadSightings } from "./sightings";
@@ -33,6 +34,10 @@ toggle.addEventListener("click", () => {
     : "Hide the animal list";
 });
 
+// On phones the sidebar is a drawer; CSS only shows its handle there.
+const sheet = createBottomSheet(byId("sidebar"), byId("sheet-handle") as HTMLButtonElement);
+const isPhone = () => window.matchMedia("(max-width: 40rem)").matches;
+
 // The welcome card's quick picks wait until the picker can act on them.
 const welcome = byId("welcome");
 let picker: PickerApi | null = null;
@@ -42,7 +47,13 @@ const welcomeButtons = PRESETS.map((preset) => {
   button.className = "preset";
   button.textContent = `${preset.icon} ${preset.label}`;
   button.disabled = true;
-  button.addEventListener("click", () => picker?.pick(preset.ids));
+  button.addEventListener("click", () => {
+    picker?.pick(preset.ids);
+    // Get the drawer out of the way so the picks can be seen on the map.
+    if (isPhone()) {
+      sheet.set("peek");
+    }
+  });
   return button;
 });
 byId("welcome-presets").append(...welcomeButtons);
