@@ -13,7 +13,7 @@ Availability was checked on 2026-11-01. Sightings are GBIF records with coordina
 | Lion | 17,100 | 3809257699 | CC_BY | 241,760 | 13 |
 | African bush elephant | 25,973 | 605129389 | CC_BY_NC | 2,930,263 | 15 |
 | African forest elephant | 1,080 | 1818825 | CC_BY | 37,530 | 36 |
-| Asian elephant | 11,845 | 56232621 | CUSTOM | 446,572 | 2 |
+| Asian elephant | 11,845 | 56232621 (not used: its licence asks users to contact the investigators first) | CUSTOM | 446,572 | 2 |
 | Giraffe | 5,611 | none | | | |
 | Leopard | 10,214 | 1283461962 | CC_0 | 1,840 | 16 |
 | Giant panda | 67 | none | | | |
@@ -32,7 +32,7 @@ Availability was checked on 2026-11-01. Sightings are GBIF records with coordina
 | Blue whale | 30,357 | 650188969 | CC_BY | 15,545 | 143 |
 | Green sea turtle | 279,514 | 3267664208 | CC_BY | 55,411 | 33 |
 | Emperor penguin | 131,586 | 1322558986 | CC_BY | 120,983 | 56 |
-| Bald eagle | 7,265,672 | 20873986 | CC_BY | 158,878 | 5 |
+| Bald eagle | 7,265,672 | 20873986 | CC_BY | 158,878 | 5 (4 drawn) |
 | Snowy owl | 267,100 | 12112706 | CC_BY | 33,492 | 33 |
 
 Species marked `none` will show sightings with an empty state for tracks.

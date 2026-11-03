@@ -8,7 +8,16 @@
   <body>
     <aside class="sidebar">
       <h1>Animal Tracker Map</h1>
+      <fieldset id="layer-toggles" class="layer-toggles">
+        <legend>Show</legend>
+        <label><input type="checkbox" value="sightings" checked /> Sightings (dots)</label>
+        <label><input type="checkbox" value="tracks" checked /> Migration tracks (lines)</label>
+      </fieldset>
       <div id="species-picker"></div>
+      <section id="sources" class="sources" hidden>
+        <h2>Track data</h2>
+        <ul></ul>
+      </section>
     </aside>
     <main class="map-area">
       <div id="map"></div>

@@ -22,4 +22,5 @@ Static site showing ~25 species: sightings, migration tracks, conservation statu
 - web: npm run dev | npm run lint | npm test | npm run build
 - pipeline: ruff check . | python -m pytest
 - refresh sightings (about 20 min): python -m animal_tracker_pipeline.sightings
+- refresh tracks: python -m animal_tracker_pipeline.tracks (reads Movebank login from .env)
 - Commit and push directly to main. No branches or PRs. Run lint and tests before pushing.

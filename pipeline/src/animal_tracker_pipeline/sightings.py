@@ -5,14 +5,13 @@ it occurs rather than how heavily each country is recorded. Run with:
     python -m animal_tracker_pipeline.sightings
 """
 
-import gzip
-import json
 import logging
 import sys
 from pathlib import Path
 from typing import Any
 
 from animal_tracker_pipeline.gbif import GbifClient, GbifError, RequestBudgetExceeded
+from animal_tracker_pipeline.output import write_json_gz
 from animal_tracker_pipeline.species import DEFAULT_PATH, Species, load_species
 
 logger = logging.getLogger(__name__)
@@ -133,14 +132,7 @@ def fetch_sightings(client: GbifClient, species: Species) -> dict[str, Any]:
 
 
 def write_sightings(sightings: dict[str, Any], output_dir: Path) -> Path:
-    """Writes atomically; a fixed gzip timestamp keeps unchanged data unchanged."""
-    output_dir.mkdir(parents=True, exist_ok=True)
-    path = output_dir / f"{sightings['speciesId']}.json.gz"
-    body = json.dumps(sightings, separators=(",", ":")).encode()
-    temporary = path.with_suffix(".tmp")
-    temporary.write_bytes(gzip.compress(body, mtime=0))
-    temporary.replace(path)
-    return path
+    return write_json_gz(sightings, output_dir / f"{sightings['speciesId']}.json.gz")
 
 
 def run(client: GbifClient, species: list[Species], output_dir: Path) -> list[str]:
