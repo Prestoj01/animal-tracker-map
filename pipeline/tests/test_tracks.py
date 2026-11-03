@@ -45,7 +45,10 @@ def test_keeps_the_first_fix_per_animal_per_day():
         "Panthera leo",
     )
 
-    assert tracks_ == [[[1.0, 1.0], [3.0, 3.0]]]  # b has one point, so no line
+    # b has one point, so no line.
+    assert tracks_ == [
+        {"animal": "a", "start": "2020-01-01", "points": [[1.0, 1.0, 0], [3.0, 3.0, 1]]}
+    ]
     assert (first, last) == ("2020-01-01", "2020-01-05")
 
 
@@ -68,7 +71,7 @@ def test_drops_outliers_bad_coordinates_and_other_species():
         "Panthera leo",
     )
 
-    assert tracks_ == [[[1.0, 1.0], [2.0, 2.0]]]
+    assert [track["points"] for track in tracks_] == [[[1.0, 1.0, 0], [2.0, 2.0, 6]]]
 
 
 def test_rounds_and_thins_long_tracks(monkeypatch):
@@ -77,7 +80,7 @@ def test_rounds_and_thins_long_tracks(monkeypatch):
 
     tracks_, _, _ = reduce_events(rows, "Panthera leo")
 
-    assert tracks_ == [[[1.12, 1.0], [4.12, 1.0], [7.12, 1.0]]]
+    assert tracks_[0]["points"] == [[1.12, 1.0, 0], [4.12, 1.0, 3], [7.12, 1.0, 6]]
 
 
 def test_keeps_the_most_tracked_animals(monkeypatch):
@@ -87,7 +90,20 @@ def test_keeps_the_most_tracked_animals(monkeypatch):
 
     tracks_, _, _ = reduce_events(rows, "Panthera leo")
 
-    assert tracks_ == [[[-1.0, 1.0], [-2.0, 1.0], [-3.0, 1.0]]]
+    assert [track["animal"] for track in tracks_] == ["long"]
+
+
+def test_merges_days_spent_in_one_place():
+    tracks_, _, _ = reduce_events(
+        [
+            event("a", "2020-01-01", 1, 1),
+            event("a", "2020-01-02", 1.001, 1),
+            event("a", "2020-01-03", 2, 2),
+        ],
+        "Panthera leo",
+    )
+
+    assert tracks_[0]["points"] == [[1.0, 1.0, 0], [2.0, 2.0, 2]]
 
 
 def test_plain_text_strips_html():
@@ -129,7 +145,13 @@ def test_fetch_tracks_includes_the_citation():
     assert data["study"]["licenseType"] == "CC_BY"
     assert (data["study"]["firstYear"], data["study"]["lastYear"]) == (2010, 2012)
     assert data["study"]["url"].endswith(str(TRACK_STUDIES["lion"]))
-    assert data["tracks"] == [[[1.0, 1.0], [2.0, 2.0]]]
+    assert data["tracks"] == [
+        {
+            "animal": "a",
+            "start": "2010-05-01",
+            "points": [[1.0, 1.0, 0], [2.0, 2.0, 732]],
+        }
+    ]
 
 
 def read(path):
@@ -176,7 +198,10 @@ def test_every_species_has_a_valid_committed_file():
         else:
             assert data["study"]["citation"], species.id
         for track in data["tracks"]:
-            assert len(track) >= 2
-            for longitude, latitude in track:
+            assert track["animal"] and track["start"]
+            assert len(track["points"]) >= 2
+            days = [day for _, _, day in track["points"]]
+            assert days == sorted(days) and days[0] == 0
+            for longitude, latitude, _ in track["points"]:
                 assert -180 <= longitude <= 180
                 assert -90 <= latitude <= 90

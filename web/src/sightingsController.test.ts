@@ -18,10 +18,14 @@ const tracks: Tracks = {
   speciesId: "lion",
   study,
   tracks: [
-    [
-      [1, 2],
-      [3, 4],
-    ],
+    {
+      animal: "Rain",
+      start: "2010-01-01",
+      points: [
+        [1, 2, 0],
+        [3, 4, 5],
+      ],
+    },
   ],
 };
 const noTracks: Tracks = { speciesId: "lion", study: null, tracks: [] };
@@ -31,6 +35,7 @@ const map = {
   showTracks: vi.fn(),
   hideSpecies: vi.fn(),
   setKindVisible: vi.fn(),
+  playTracks: vi.fn(),
 };
 const status = { set: vi.fn() };
 let legend: HTMLElement;

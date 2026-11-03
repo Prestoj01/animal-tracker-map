@@ -37,10 +37,11 @@ Gzipped JSON, generated from Movebank by `pipeline/src/animal_tracker_pipeline/t
 | ----------- | -------------- | ------------------------------------------------------------------------ |
 | `speciesId` | string         | Matches `id` in `species.json`                                           |
 | `study`     | object or null | `id`, `name`, `citation`, `licenseType`, `url`, `firstYear`, `lastYear`; null when the species has no study |
-| `tracks`    | array          | One line per animal: `[longitude, latitude]` pairs, rounded to 0.01°     |
+| `tracks`    | array          | One entry per animal: `animal` (the study's name or code for it), `start` (YYYY-MM-DD) and `points`, each `[longitude, latitude, day]` with coordinates rounded to 0.01° and `day` counted from `start` |
 
 - **Raw data:** Movebank data is streamed and reduced in memory. It is never written to disk or committed, as the Movebank rule in `CLAUDE.md` requires.
-- **Reduction:** each animal keeps its first location per day, thinned to at most 400 points, for the 30 most-tracked animals.
+- **Reduction:** each animal keeps its first location per day, thinned to at most 400 points, for the 30 most-tracked animals. Consecutive days in the same rounded spot are merged, keeping the first.
+- **Dates:** the site uses `start` and `day` for hover labels like "Bald eagle · Freedom · May 2016 – Jan 2021", and to replay journeys.
 - **Filtering:** the pipeline drops locations the data owner marked as outliers, locations with no animal assigned (a tag's readings before or after it was fitted), and animals of other species in shared studies.
 - **Citations:** every study's citation and licence are shown on the site whenever its tracks are on the map. CC BY and CC BY-NC licences require this.
 - **Licences:** a study's licence must be accepted on Movebank before its data can be downloaded. Until then, the pipeline reports it and the species shows "no tracks".

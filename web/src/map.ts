@@ -3,13 +3,14 @@ import {
   NavigationControl,
   Popup,
   setWorkerUrl,
+  type GeoJSONSource,
   type LayerSpecification,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 // MapLibre ships its worker as a separate file, which the bundler only emits if imported.
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import type { Point } from "./sightings";
-import { splitAtAntimeridian } from "./tracks";
+import { splitAtAntimeridian, trackLabel, trackSoFar, type Track } from "./tracks";
 
 setWorkerUrl(workerUrl);
 
@@ -18,16 +19,26 @@ const STYLE_URL = "https://tiles.openfreemap.org/styles/dark";
 const LOAD_TIMEOUT_MS = 15000;
 // Waits for an animal's sightings and tracks to both arrive before moving once.
 const FIT_DELAY_MS = 250;
+const PLAY_DURATION_MS = 12000;
+// Redrawing every animal's line is costly, so the replay updates about 30 times a second.
+const PLAY_FRAME_MS = 33;
 const FAILED_MESSAGE = "The map could not be loaded. Check your connection and reload the page.";
 
 export type LayerKind = "sightings" | "tracks";
 
 export interface SightingsMap {
   showSightings(id: string, name: string, color: string, points: Point[]): void;
-  showTracks(id: string, name: string, color: string, tracks: Point[][]): void;
+  showTracks(id: string, name: string, color: string, tracks: Track[]): void;
   /** Removes both kinds of layer for a species. */
   hideSpecies(id: string): void;
   setKindVisible(kind: LayerKind, visible: boolean): void;
+  /** Replays every track on the map from its start; returns a way to stop early. */
+  playTracks(handlers: { onProgress(progress: number): void; onEnd(): void }): () => void;
+}
+
+export interface MapOptions {
+  /** Called whenever the map gains its first track or loses its last. */
+  onTracksChange?: (hasTracks: boolean) => void;
 }
 
 function layerId(kind: LayerKind, id: string): string {
@@ -35,7 +46,11 @@ function layerId(kind: LayerKind, id: string): string {
 }
 
 /** Creates the map, reporting its loading and failed states in `status`. */
-export function createMap(container: HTMLElement, status: HTMLElement): SightingsMap {
+export function createMap(
+  container: HTMLElement,
+  status: HTMLElement,
+  { onTracksChange = () => {} }: MapOptions = {},
+): SightingsMap {
   const show = (text: string) => {
     status.textContent = text;
     status.hidden = false;
@@ -56,7 +71,16 @@ export function createMap(container: HTMLElement, status: HTMLElement): Sighting
     // The constructor throws when the browser has no WebGL.
     console.error("Could not create the map", error);
     show(FAILED_MESSAGE);
-    return { showSightings() {}, showTracks() {}, hideSpecies() {}, setKindVisible() {} };
+    return {
+      showSightings() {},
+      showTracks() {},
+      hideSpecies() {},
+      setKindVisible() {},
+      playTracks: ({ onEnd }) => {
+        onEnd();
+        return () => {};
+      },
+    };
   }
 
   map.addControl(new NavigationControl());
@@ -129,7 +153,7 @@ export function createMap(container: HTMLElement, status: HTMLElement): Sighting
   const add = (
     kind: LayerKind,
     id: string,
-    label: string,
+    label: string | null,
     features: GeoJSON.Feature[],
     paint: LayerSpecification["paint"],
   ) => {
@@ -151,12 +175,74 @@ export function createMap(container: HTMLElement, status: HTMLElement): Sighting
     // Naming the species on hover means identity never depends on colour alone.
     map.on("mousemove", layer, (event) => {
       map.getCanvas().style.cursor = "pointer";
-      popup.setLngLat(event.lngLat).setText(label).addTo(map);
+      // Tracks carry their own label: the animal's name and dates.
+      const text = label ?? String(event.features?.[0]?.properties?.label ?? "");
+      popup.setLngLat(event.lngLat).setText(text).addTo(map);
     });
     map.on("mouseleave", layer, () => {
       map.getCanvas().style.cursor = "";
       popup.remove();
     });
+  };
+
+  const trackData = new Map<string, { name: string; tracks: Track[] }>();
+
+  /** Lines for each track as far as `progress` through its own timespan. */
+  const trackFeatures = (name: string, tracks: Track[], progress: number) =>
+    tracks.flatMap((track) => {
+      const label = trackLabel(name, track);
+      const line =
+        progress >= 1
+          ? track.points.map(([lon, lat]): Point => [lon, lat])
+          : trackSoFar(track, progress).line;
+      return splitAtAntimeridian(line).map(
+        (coordinates): GeoJSON.Feature => ({
+          type: "Feature",
+          properties: { label },
+          geometry: { type: "LineString", coordinates },
+        }),
+      );
+    });
+
+  const HEADS = layerId("tracks", "replay-heads");
+
+  const drawFrame = (progress: number) => {
+    const heads: GeoJSON.Feature[] = [];
+    for (const [id, { name, tracks }] of trackData) {
+      map
+        .getSource<GeoJSONSource>(layerId("tracks", id))
+        ?.setData({ type: "FeatureCollection", features: trackFeatures(name, tracks, progress) });
+      const color = map.getPaintProperty(layerId("tracks", id), "line-color");
+      if (progress < 1) {
+        for (const track of tracks) {
+          heads.push({
+            type: "Feature",
+            properties: { color },
+            geometry: { type: "Point", coordinates: trackSoFar(track, progress).head },
+          });
+        }
+      }
+    }
+    const data: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: heads };
+    const source = map.getSource<GeoJSONSource>(HEADS);
+    if (source) {
+      source.setData(data);
+      return;
+    }
+    map.addSource(HEADS, { type: "geojson", data });
+    map.addLayer({
+      id: HEADS,
+      type: "circle",
+      source: HEADS,
+      paint: {
+        "circle-color": ["get", "color"],
+        "circle-radius": 5,
+        "circle-stroke-color": "#f0efec",
+        "circle-stroke-width": 1.5,
+      },
+      layout: { visibility: visible.tracks ? "visible" : "none" },
+    });
+    layers.add(HEADS);
   };
 
   const whenReady = (key: string, run: () => void) => {
@@ -195,16 +281,14 @@ export function createMap(container: HTMLElement, status: HTMLElement): Sighting
       );
     },
     showTracks(id, name, color, tracks) {
-      extend(id, tracks.flat());
-      const features = tracks.flatMap(splitAtAntimeridian).map(
-        (coordinates): GeoJSON.Feature => ({
-          type: "Feature",
-          properties: {},
-          geometry: { type: "LineString", coordinates },
-        }),
+      extend(
+        id,
+        tracks.flatMap((track) => track.points.map(([lon, lat]): Point => [lon, lat])),
       );
+      trackData.set(id, { name, tracks });
+      onTracksChange(true);
       whenReady(layerId("tracks", id), () =>
-        add("tracks", id, `${name} (tracked animal)`, features, {
+        add("tracks", id, null, trackFeatures(name, tracks, 1), {
           "line-color": color,
           "line-width": 2,
           "line-opacity": 0.9,
@@ -213,6 +297,9 @@ export function createMap(container: HTMLElement, status: HTMLElement): Sighting
       );
     },
     hideSpecies(id) {
+      if (trackData.delete(id) && trackData.size === 0) {
+        onTracksChange(false);
+      }
       // The view stays put, so removing an animal doesn't jolt the map.
       extents.delete(id);
       for (const kind of ["sightings", "tracks"] as const) {
@@ -224,6 +311,31 @@ export function createMap(container: HTMLElement, status: HTMLElement): Sighting
         }
       }
       popup.remove();
+    },
+    playTracks({ onProgress, onEnd }) {
+      if (!loaded || trackData.size === 0) {
+        onEnd();
+        return () => {};
+      }
+      const started = Date.now();
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const finish = () => {
+        clearTimeout(timer);
+        drawFrame(1);
+        onEnd();
+      };
+      const step = () => {
+        const progress = Math.min(1, (Date.now() - started) / PLAY_DURATION_MS);
+        onProgress(progress);
+        if (progress >= 1) {
+          finish();
+          return;
+        }
+        drawFrame(progress);
+        timer = setTimeout(step, PLAY_FRAME_MS);
+      };
+      step();
+      return finish;
     },
     setKindVisible(kind, isVisible) {
       visible[kind] = isVisible;

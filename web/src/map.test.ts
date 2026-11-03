@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMap } from "./map";
+import type { Track, TrackPoint } from "./tracks";
 
 type Handler = (event: { error?: Error }) => void;
+interface FakeFeature {
+  geometry: { type: string; coordinates: unknown };
+  properties: Record<string, unknown>;
+}
 interface FakeLayer {
   id: string;
   paint: Record<string, unknown>;
@@ -12,7 +17,7 @@ const mock = vi.hoisted(() => ({
   handlers: new Map<string, (event: { error?: Error }) => void>(),
   layerOrder: [] as string[],
   layers: new Map<string, FakeLayer>(),
-  sources: new Map<string, { data: { features: { geometry: { type: string } }[] } }>(),
+  sources: new Map<string, { data: { features: FakeFeature[] } }>(),
   failToConstruct: false,
   fits: [] as unknown[],
 }));
@@ -31,8 +36,18 @@ vi.mock("maplibre-gl", () => ({
         mock.handlers.set(event, rest[0]);
       }
     }
-    addSource(id: string, source: { data: { features: { geometry: { type: string } }[] } }) {
-      mock.sources.set(id, source);
+    addSource(id: string, source: { data: { features: FakeFeature[] } }) {
+      mock.sources.set(id, { data: source.data });
+    }
+    getSource(id: string) {
+      const source = mock.sources.get(id);
+      return (
+        source && {
+          setData(data: { features: FakeFeature[] }) {
+            source.data = data;
+          },
+        }
+      );
     }
     addLayer(layer: FakeLayer, beforeId?: string) {
       mock.layers.set(layer.id, layer);
@@ -48,6 +63,9 @@ vi.mock("maplibre-gl", () => ({
     }
     fitBounds(bounds: unknown) {
       mock.fits.push(bounds);
+    }
+    getPaintProperty(id: string, name: string) {
+      return mock.layers.get(id)?.paint[name];
     }
     setLayoutProperty(id: string, _name: string, value: string) {
       const layer = mock.layers.get(id);
@@ -65,6 +83,15 @@ vi.mock("maplibre-gl", () => ({
 vi.mock("maplibre-gl/dist/maplibre-gl.css", () => ({}));
 
 let status: HTMLElement;
+
+/** A track whose points are one day apart. */
+function line(...points: [number, number][]): Track {
+  return {
+    animal: "Rain",
+    start: "2020-01-01",
+    points: points.map(([longitude, latitude], day): TrackPoint => [longitude, latitude, day]),
+  };
+}
 
 function start() {
   return createMap(document.createElement("div"), status);
@@ -150,12 +177,7 @@ describe("createMap", () => {
       [1, 2],
       [3, 4],
     ]);
-    map.showTracks("lion", "Lion", "#123456", [
-      [
-        [1, 2],
-        [3, 4],
-      ],
-    ]);
+    map.showTracks("lion", "Lion", "#123456", [line([1, 2], [3, 4])]);
     expect(mock.layers.get("sightings-lion")?.paint["circle-color"]).toBe("#123456");
     expect(mock.layers.get("tracks-lion")?.paint["line-color"]).toBe("#123456");
     expect(mock.sources.get("sightings-lion")?.data.features).toHaveLength(2);
@@ -170,12 +192,7 @@ describe("createMap", () => {
     const map = loadedMap();
 
     map.showSightings("lion", "Lion", "#123456", [[1, 2]]);
-    map.showTracks("wolf", "Wolf", "#654321", [
-      [
-        [1, 2],
-        [3, 4],
-      ],
-    ]);
+    map.showTracks("wolf", "Wolf", "#654321", [line([1, 2], [3, 4])]);
 
     expect(mock.layerOrder).toEqual(["tracks-wolf", "sightings-lion"]);
   });
@@ -183,36 +200,19 @@ describe("createMap", () => {
   it("splits tracks that cross the 180° meridian", () => {
     const map = loadedMap();
 
-    map.showTracks("whale", "Whale", "#000", [
-      [
-        [170, 0],
-        [179, 0],
-        [-179, 0],
-        [-170, 0],
-      ],
-    ]);
+    map.showTracks("whale", "Whale", "#000", [line([170, 0], [179, 0], [-179, 0], [-170, 0])]);
 
     expect(mock.sources.get("tracks-whale")?.data.features).toHaveLength(2);
   });
 
   it("hides and shows each kind of layer, including ones added later", () => {
     const map = loadedMap();
-    map.showTracks("lion", "Lion", "#000", [
-      [
-        [1, 2],
-        [3, 4],
-      ],
-    ]);
+    map.showTracks("lion", "Lion", "#000", [line([1, 2], [3, 4])]);
 
     map.setKindVisible("tracks", false);
     expect(mock.layers.get("tracks-lion")?.layout.visibility).toBe("none");
 
-    map.showTracks("wolf", "Wolf", "#000", [
-      [
-        [1, 2],
-        [3, 4],
-      ],
-    ]);
+    map.showTracks("wolf", "Wolf", "#000", [line([1, 2], [3, 4])]);
     map.showSightings("wolf", "Wolf", "#000", [[1, 2]]);
     expect(mock.layers.get("tracks-wolf")?.layout.visibility).toBe("none");
     expect(mock.layers.get("sightings-wolf")?.layout.visibility).toBe("visible");
@@ -235,12 +235,7 @@ describe("createMap", () => {
     const map = start();
 
     map.showSightings("lion", "Lion", "#123456", [[1, 2]]);
-    map.showTracks("lion", "Lion", "#123456", [
-      [
-        [1, 2],
-        [3, 4],
-      ],
-    ]);
+    map.showTracks("lion", "Lion", "#123456", [line([1, 2], [3, 4])]);
     map.hideSpecies("lion");
     mock.handlers.get("load")?.({});
 
@@ -254,12 +249,7 @@ describe("createMap", () => {
       [10, -5],
       [30, 5],
     ]);
-    map.showTracks("lion", "Lion", "#000", [
-      [
-        [20, -20],
-        [25, -10],
-      ],
-    ]);
+    map.showTracks("lion", "Lion", "#000", [line([20, -20], [25, -10])]);
     map.showSightings("wolf", "Wolf", "#111", [[-100, 50]]);
     expect(mock.fits).toEqual([]);
 
@@ -288,5 +278,69 @@ describe("createMap", () => {
       [10, -5],
       [80, 20],
     ]);
+  });
+
+  it("labels each track with its animal and dates", () => {
+    const map = loadedMap();
+
+    map.showTracks("lion", "Lion", "#000", [
+      { animal: "Rain", start: "2014-05-31", points: [[1, 2, 0], [3, 4, 400]] },
+    ]);
+
+    const [feature] = mock.sources.get("tracks-lion")?.data.features ?? [];
+    expect(feature.properties.label).toBe("Lion · Rain · May 2014 – Jul 2015");
+  });
+
+  it("tells the page when the map gains its first track and loses its last", () => {
+    const onTracksChange = vi.fn();
+    const map = createMap(document.createElement("div"), status, { onTracksChange });
+    mock.handlers.get("load")?.({});
+
+    map.showTracks("lion", "Lion", "#000", [line([1, 2], [3, 4])]);
+    map.showTracks("wolf", "Wolf", "#111", [line([1, 2], [3, 4])]);
+    map.hideSpecies("lion");
+    expect(onTracksChange.mock.calls).toEqual([[true], [true]]);
+
+    map.hideSpecies("wolf");
+    expect(onTracksChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("replays tracks from their start, with a moving dot, then restores them", () => {
+    const map = loadedMap();
+    map.showTracks("lion", "Lion", "#123456", [line([0, 0], [10, 0], [20, 0])]);
+    const onProgress = vi.fn();
+    const onEnd = vi.fn();
+
+    map.playTracks({ onProgress, onEnd });
+    vi.advanceTimersByTime(6000);
+
+    // Frames land every 33 ms, so "halfway" is a hair short of the middle fix.
+    const halfway = mock.sources.get("tracks-lion")?.data.features[0].geometry
+      .coordinates as number[][];
+    expect(halfway).toHaveLength(2);
+    expect(halfway[1][0]).toBeCloseTo(10, 0);
+    const [head] = mock.sources.get("tracks-replay-heads")?.data.features ?? [];
+    expect((head.geometry.coordinates as number[])[0]).toBeCloseTo(10, 0);
+    expect(head.properties.color).toBe("#123456");
+    expect(onProgress.mock.lastCall?.[0]).toBeCloseTo(0.5, 1);
+
+    vi.advanceTimersByTime(7000);
+    expect(onEnd).toHaveBeenCalledTimes(1);
+    expect(mock.sources.get("tracks-lion")?.data.features[0].geometry.coordinates).toHaveLength(3);
+    expect(mock.sources.get("tracks-replay-heads")?.data.features).toEqual([]);
+  });
+
+  it("can stop a replay early, and ends at once with nothing to play", () => {
+    const map = loadedMap();
+    const onEnd = vi.fn();
+    map.playTracks({ onProgress: vi.fn(), onEnd });
+    expect(onEnd).toHaveBeenCalledTimes(1);
+
+    map.showTracks("lion", "Lion", "#000", [line([0, 0], [10, 0], [20, 0])]);
+    const stop = map.playTracks({ onProgress: vi.fn(), onEnd });
+    vi.advanceTimersByTime(1000);
+    stop();
+    expect(onEnd).toHaveBeenCalledTimes(2);
+    expect(mock.sources.get("tracks-lion")?.data.features[0].geometry.coordinates).toHaveLength(3);
   });
 });

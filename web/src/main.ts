@@ -19,7 +19,43 @@ function byId(id: string): HTMLElement {
   return element;
 }
 
-const map = createMap(byId("map"), byId("map-status"));
+const playback = byId("playback");
+const map = createMap(byId("map"), byId("map-status"), {
+  onTracksChange: (hasTracks) => {
+    playback.hidden = !hasTracks;
+    if (!hasTracks) {
+      stopReplay?.();
+    }
+  },
+});
+
+// Replays every track on the map from its start, as a moving dot drawing its line.
+const playButton = byId("play-tracks");
+const progressBar = byId("playback-progress");
+const tracksSwitch = byId("layer-toggles").querySelector<HTMLInputElement>('input[value="tracks"]');
+let stopReplay: (() => void) | null = null;
+playButton.addEventListener("click", () => {
+  if (stopReplay) {
+    stopReplay();
+    return;
+  }
+  // A replay is pointless with tracks hidden, so show them.
+  if (tracksSwitch && !tracksSwitch.checked) {
+    tracksSwitch.checked = true;
+    map.setKindVisible("tracks", true);
+  }
+  playButton.textContent = "■ Stop";
+  stopReplay = map.playTracks({
+    onProgress: (progress) => {
+      progressBar.style.width = `${progress * 100}%`;
+    },
+    onEnd: () => {
+      stopReplay = null;
+      playButton.textContent = "▶ Play journeys";
+      progressBar.style.width = "0";
+    },
+  });
+});
 
 // Both are shared by the cards and the profile panel, so each loads once.
 function once<T>(load: () => Promise<T>): () => Promise<T> {

@@ -5,6 +5,7 @@ each animal keeps at most one location per day. Run with:
     python -m animal_tracker_pipeline.tracks
 """
 
+import datetime
 import html
 import logging
 import re
@@ -67,8 +68,12 @@ def plain_text(value: str) -> str:
 
 def reduce_events(
     rows: Any, scientific_name: str
-) -> tuple[list[list[list[float]]], str | None, str | None]:
-    """Keeps one location per animal per day and returns tracks plus the date range."""
+) -> tuple[list[dict[str, Any]], str | None, str | None]:
+    """Keeps one location per animal per day and returns tracks plus the date range.
+
+    Each track names its animal and start date, and each point carries the
+    number of days since that start, so the site can show dates and replay it.
+    """
     daily: dict[tuple[str, str], tuple[str, float, float]] = {}
     for row in rows:
         animal = row.get("individual_local_identifier") or ""
@@ -98,20 +103,25 @@ def reduce_events(
         by_animal.setdefault(animal, []).append(fix)
 
     tracks = []
-    largest = sorted(by_animal.values(), key=len, reverse=True)[:MAX_ANIMALS]
-    for fixes in largest:
+    largest = sorted(by_animal.items(), key=lambda item: len(item[1]), reverse=True)
+    for animal, fixes in largest[:MAX_ANIMALS]:
         fixes.sort()
+        start = datetime.date.fromisoformat(fixes[0][0][:10])
         step = max(1, -(-len(fixes) // MAX_POINTS_PER_ANIMAL))
         points: list[list[float]] = []
-        for _, longitude, latitude in fixes[::step]:
-            point = [
+        for timestamp, longitude, latitude in fixes[::step]:
+            position = [
                 round(longitude, COORDINATE_DECIMALS),
                 round(latitude, COORDINATE_DECIMALS),
             ]
-            if not points or points[-1] != point:
-                points.append(point)
+            if points and points[-1][:2] == position:
+                continue  # The animal stayed put; its first day there is kept.
+            day = (datetime.date.fromisoformat(timestamp[:10]) - start).days
+            points.append([*position, day])
         if len(points) >= 2:
-            tracks.append(points)
+            tracks.append(
+                {"animal": animal, "start": start.isoformat(), "points": points}
+            )
 
     days = sorted(day for _, day in daily)
     return tracks, (days[0] if days else None), (days[-1] if days else None)
@@ -177,7 +187,7 @@ def run(
                 "%s: %d animals, %d points, %d bytes",
                 entry.id,
                 len(data["tracks"]),
-                sum(len(track) for track in data["tracks"]),
+                sum(len(track["points"]) for track in data["tracks"]),
                 path.stat().st_size,
             )
             continue
