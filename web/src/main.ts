@@ -1,6 +1,7 @@
 import { createBottomSheet } from "./bottomSheet";
 import { PRESETS } from "./catalog";
-import { createMap, type LayerKind } from "./map";
+import { createLazyMap } from "./lazyMap";
+import type { LayerKind } from "./map";
 import { createProfilePanel } from "./profilePanel";
 import { loadProfiles } from "./profiles";
 import { loadSightings } from "./sightings";
@@ -21,14 +22,25 @@ function byId(id: string): HTMLElement {
 }
 
 const playback = byId("playback");
-const map = createMap(byId("map"), byId("map-status"), {
-  onTracksChange: (hasTracks) => {
-    playback.hidden = !hasTracks;
-    if (!hasTracks) {
-      stopReplay?.();
-    }
+const mapStatus = byId("map-status");
+// The map library is most of the download, so it loads separately: the animal
+// list is usable meanwhile, and anything picked is drawn once the map arrives.
+const map = createLazyMap(
+  import("./map").then(({ createMap }) =>
+    createMap(byId("map"), mapStatus, {
+      onTracksChange: (hasTracks) => {
+        playback.hidden = !hasTracks;
+        if (!hasTracks) {
+          stopReplay?.();
+        }
+      },
+    }),
+  ),
+  () => {
+    mapStatus.textContent = "The map could not be loaded. Check your connection and reload the page.";
+    mapStatus.hidden = false;
   },
-});
+);
 
 // Replays every track on the map from its start, as a moving dot drawing its line.
 const playButton = byId("play-tracks");

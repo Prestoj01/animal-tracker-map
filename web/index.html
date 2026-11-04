@@ -9,6 +9,8 @@
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>"
     />
     <title>Animal Tracker Map</title>
+    <!-- Start connecting to the map tile server while the page loads. -->
+    <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin />
   </head>
   <body>
     <aside id="sidebar" class="sidebar">
@@ -56,7 +58,7 @@
         <p>See where each animal has been spotted, and follow tracked animals on their journeys.</p>
         <div id="welcome-presets" class="welcome-presets"></div>
       </section>
-      <p id="map-status" class="map-status panel" role="status" hidden></p>
+      <p id="map-status" class="map-status panel" role="status">Loading map…</p>
       <aside id="profile" class="profile panel" hidden></aside>
       <ul id="legend" class="legend panel" aria-label="Animals on the map" hidden></ul>
       <div id="playback" class="playback panel" hidden>
