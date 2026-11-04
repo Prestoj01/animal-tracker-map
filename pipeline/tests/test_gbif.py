@@ -1,3 +1,4 @@
+import http.client
 import io
 import json
 import urllib.error
@@ -37,7 +38,14 @@ def test_returns_json_and_sends_timeout_and_user_agent():
 
 @pytest.mark.parametrize(
     "failure",
-    [http_error(503), http_error(429), urllib.error.URLError("down"), TimeoutError()],
+    [
+        http_error(503),
+        http_error(429),
+        urllib.error.URLError("down"),
+        TimeoutError(),
+        http.client.RemoteDisconnected("closed"),
+        http.client.IncompleteRead(b"partial"),
+    ],
 )
 def test_retries_transient_failures(failure):
     client, requests = client_returning(failure, {"ok": True})

@@ -48,6 +48,14 @@ EXCLUDED_COUNTRIES: dict[str, set[str]] = {
     "grey-wolf": {"CO", "BR", "TT", "GB", "IE"},
     "western-gorilla": {"US", "DE"},
     "brown-bear": {"BR", "GB", "IE"},
+    "puma": {"DE", "LK"},
+    "white-rhino": {"SN", "US", "BR", "NE"},
+    "wildebeest": {"NG", "TG", "TD", "US"},
+    # Introduced or herded outside the native range. Scandinavian records still
+    # include herded reindeer, which GBIF doesn't separate from wild ones.
+    "caribou": {"GB", "IS", "GS", "TF", "FR", "IE", "EE", "CN", "MN"},
+    "whale-shark": {"AQ", "CA", "FR", "TR"},
+    "great-white-shark": {"GB", "NL", "BE", "RU"},
     "bald-eagle": {
         "BE", "NL", "FR", "SE", "DE", "GB", "DK", "JP", "EE", "ES", "NG", "IE", "SN",
         "ZA",

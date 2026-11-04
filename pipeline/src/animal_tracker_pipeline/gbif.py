@@ -3,6 +3,7 @@
 Used for GBIF, and for Wikipedia and Wikimedia Commons in the profiles step.
 """
 
+import http.client
 import json
 import logging
 import time
@@ -64,7 +65,13 @@ class JsonClient:
                 if error.code != 429 and error.code < 500:
                     raise GbifError(f"HTTP {error.code} for {url}") from error
                 failure: Exception = error
-            except (urllib.error.URLError, TimeoutError) as error:
+            # Dropped connections and cut-off responses are worth another try.
+            except (
+                urllib.error.URLError,
+                TimeoutError,
+                ConnectionError,
+                http.client.HTTPException,
+            ) as error:
                 failure = error
             if attempt < RETRIES:
                 delay = BACKOFF_SECONDS * 2**attempt

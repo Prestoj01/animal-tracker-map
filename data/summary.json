@@ -12,7 +12,7 @@
     "tracks": 0
   },
   "puma": {
-    "sightings": 0,
+    "sightings": 1262,
     "tracks": 0
   },
   "african-bush-elephant": {
@@ -28,7 +28,7 @@
     "tracks": 0
   },
   "white-rhino": {
-    "sightings": 0,
+    "sightings": 496,
     "tracks": 0
   },
   "western-gorilla": {
@@ -56,11 +56,11 @@
     "tracks": 0
   },
   "wildebeest": {
-    "sightings": 0,
+    "sightings": 497,
     "tracks": 0
   },
   "caribou": {
-    "sightings": 0,
+    "sightings": 710,
     "tracks": 0
   },
   "humpback-whale": {
@@ -72,11 +72,11 @@
     "tracks": 0
   },
   "whale-shark": {
-    "sightings": 0,
+    "sightings": 977,
     "tracks": 0
   },
   "great-white-shark": {
-    "sightings": 0,
+    "sightings": 582,
     "tracks": 0
   },
   "green-sea-turtle": {
