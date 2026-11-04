@@ -42,6 +42,10 @@ class MovebankLimitExceeded(MovebankError):
     """Hard stop: a run must not exceed its request or download limits."""
 
 
+class DownloadInterrupted(MovebankError):
+    """The connection stalled or dropped partway through a download."""
+
+
 def study_url(study_id: int) -> str:
     return (
         "https://www.movebank.org/cms/webapp?gwt_fragment=page=studies,path=study"
@@ -136,7 +140,7 @@ class MovebankClient:
             try:
                 yield from csv.DictReader(text)
             except (OSError, TimeoutError, http.client.HTTPException) as error:
-                raise MovebankError(f"Download interrupted: {error}") from error
+                raise DownloadInterrupted(f"Download interrupted: {error}") from error
         finally:
             response.close()
 

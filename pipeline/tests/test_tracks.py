@@ -5,6 +5,7 @@ import pytest
 
 from animal_tracker_pipeline import tracks
 from animal_tracker_pipeline.movebank import (
+    DownloadInterrupted,
     LicenceNotAccepted,
     MovebankError,
     MovebankLimitExceeded,
@@ -212,3 +213,42 @@ def test_only_download_failures_fail_the_run():
     assert exit_code({"licence": ["lion"], "failed": []}) == 0
     assert exit_code({"licence": [], "failed": ["lion"]}) == 1
     assert exit_code({"licence": [], "failed": []}) == 0
+
+
+class FlakyClient(FakeClient):
+    """Stalls mid-download a set number of times before succeeding."""
+
+    def __init__(self, stalls):
+        super().__init__(
+            [event("a", "2010-05-01", 1, 1), event("a", "2010-05-02", 2, 2)]
+        )
+        self.stalls = stalls
+        self.downloads = 0
+
+    def rows(self, params):
+        self.downloads += 1
+        if self.downloads <= self.stalls:
+            raise DownloadInterrupted("stalled")
+        return super().rows(params)
+
+
+def test_a_stalled_download_is_tried_again(tmp_path):
+    client = FlakyClient(stalls=2)
+    waits = []
+
+    problems = run(client, [LION], tmp_path, sleep=waits.append)
+
+    assert problems == {"licence": [], "failed": []}
+    assert client.downloads == 3
+    assert waits == [30, 60]
+    assert read(tmp_path / "lion.json.gz")["tracks"]
+
+
+def test_a_download_that_keeps_stalling_fails(tmp_path):
+    client = FlakyClient(stalls=3)
+
+    problems = run(client, [LION], tmp_path, sleep=lambda _: None)
+
+    assert problems["failed"] == ["lion"]
+    assert client.downloads == 3
+

@@ -10,10 +10,12 @@ import html
 import logging
 import re
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
 from animal_tracker_pipeline.movebank import (
+    DownloadInterrupted,
     LicenceNotAccepted,
     MovebankClient,
     MovebankError,
@@ -28,6 +30,9 @@ from animal_tracker_pipeline.summary import write_summary
 logger = logging.getLogger(__name__)
 
 OUTPUT_DIR = DEFAULT_PATH.parent / "tracks"
+# Movebank downloads can stall partway, so a study is tried this many times.
+DOWNLOAD_ATTEMPTS = 3
+RETRY_DELAY_SECONDS = 30
 MAX_ANIMALS = 30
 MAX_POINTS_PER_ANIMAL = 400
 # About 1 km. Precise enough to follow an animal, coarse enough to protect it.
@@ -153,8 +158,32 @@ def no_tracks(species: Species) -> dict[str, Any]:
     return {"speciesId": species.id, "study": None, "tracks": []}
 
 
+def fetch_with_retries(
+    client: MovebankClient, species: Species, sleep: Any = time.sleep
+) -> dict[str, Any]:
+    """Downloads the whole study again if the connection stalls partway through."""
+    for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+        try:
+            return fetch_tracks(client, species)
+        except DownloadInterrupted as error:
+            if attempt == DOWNLOAD_ATTEMPTS:
+                raise
+            logger.warning(
+                "%s: %s; trying again (%d of %d)",
+                species.id,
+                error,
+                attempt + 1,
+                DOWNLOAD_ATTEMPTS,
+            )
+            sleep(RETRY_DELAY_SECONDS * attempt)
+    raise AssertionError("unreachable")
+
+
 def run(
-    client: MovebankClient, species: list[Species], output_dir: Path
+    client: MovebankClient,
+    species: list[Species],
+    output_dir: Path,
+    sleep: Any = time.sleep,
 ) -> dict[str, list[str]]:
     """Returns ids of species whose licence is pending or whose download failed.
 
@@ -168,7 +197,7 @@ def run(
             write_json_gz(no_tracks(entry), path)
             continue
         try:
-            data = fetch_tracks(client, entry)
+            data = fetch_with_retries(client, entry, sleep)
         except MovebankLimitExceeded:
             raise
         except LicenceNotAccepted:
