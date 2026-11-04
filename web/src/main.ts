@@ -6,6 +6,7 @@ import { loadProfiles } from "./profiles";
 import { loadSightings } from "./sightings";
 import { createSightingsController } from "./sightingsController";
 import { loadSpecies } from "./species";
+import { copyText, readAnimals, withAnimals } from "./shareLink";
 import { renderSpeciesPicker, type PickerApi } from "./speciesPicker";
 import { loadSummary } from "./summary";
 import { loadTracks } from "./tracks";
@@ -92,6 +93,23 @@ toggle.addEventListener("click", () => {
 const sheet = createBottomSheet(byId("sidebar"), byId("sheet-handle") as HTMLButtonElement);
 const isPhone = () => window.matchMedia("(max-width: 40rem)").matches;
 
+// Read before the picker starts, because it rewrites the address as soon as it shows.
+const linkedAnimals = readAnimals(window.location.search);
+
+const shareButton = byId("share");
+let shareReset: ReturnType<typeof setTimeout> | undefined;
+shareButton.addEventListener("click", async () => {
+  const link = window.location.href;
+  if (await copyText(link)) {
+    shareButton.textContent = "✓ Link copied";
+    clearTimeout(shareReset);
+    shareReset = setTimeout(() => (shareButton.textContent = "🔗 Share"), 2000);
+  } else {
+    // Some browsers block the clipboard; let the reader copy it themselves.
+    window.prompt("Copy this link to share the map:", link);
+  }
+});
+
 // The welcome card's quick picks wait until the picker can act on them.
 const welcome = byId("welcome");
 let picker: PickerApi | null = null;
@@ -131,10 +149,19 @@ void renderSpeciesPicker(
     },
     onSelectionChange: (ids) => {
       welcome.hidden = ids.length > 0;
+      shareButton.hidden = ids.length === 0;
+      // Replacing, not pushing, so the back button leaves the site as expected.
+      window.history.replaceState(null, "", withAnimals(window.location.href, ids));
     },
     onReady: (api) => {
       picker = api;
       welcomeButtons.forEach((button) => (button.disabled = false));
+      if (linkedAnimals.length > 0) {
+        api.pick(linkedAnimals);
+        if (isPhone()) {
+          sheet.set("peek");
+        }
+      }
     },
   },
 );

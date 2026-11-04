@@ -738,6 +738,15 @@ button:disabled {
   transition: transform 150ms;
 }
 
+.share-button {
+  position: absolute;
+  top: 0.75rem;
+  left: 3.25rem;
+  height: 2rem;
+  padding: 0 0.75rem;
+  font-size: 0.8125rem;
+}
+
 .sidebar-collapsed .sidebar {
   display: none;
 }
@@ -830,6 +839,10 @@ button:disabled {
   /* On phones the drawer replaces the desktop collapse button. */
   .sidebar-toggle {
     display: none;
+  }
+
+  .share-button {
+    left: 0.75rem;
   }
 
   .sidebar-collapsed .sidebar {
