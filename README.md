@@ -26,3 +26,11 @@ python -m pytest
 
 The format of the shared data files is described in [docs/data-format.md](docs/data-format.md).
 
+## Data refresh
+
+Every Monday, the `Refresh data` GitHub Actions workflow refreshes sightings (GBIF), tracks (Movebank) and profiles (Wikipedia), checks the data with the pipeline tests, and commits any changes to `main`, which redeploys the site.
+
+- **Run it by hand:** open the repository's **Actions** tab, choose **Refresh data**, then **Run workflow**.
+- **Failures:** if a source fails, what did refresh is still saved, and the run is marked as failed so GitHub emails you. Movebank studies whose licence isn't accepted yet are only a warning.
+- **Secrets:** it needs the `MOVEBANK_USERNAME` and `MOVEBANK_PASSWORD` repository secrets.
+

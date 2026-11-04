@@ -14,6 +14,7 @@ from animal_tracker_pipeline.species import Species, load_species
 from animal_tracker_pipeline.tracks import (
     OUTPUT_DIR,
     TRACK_STUDIES,
+    exit_code,
     fetch_tracks,
     plain_text,
     reduce_events,
@@ -205,3 +206,9 @@ def test_every_species_has_a_valid_committed_file():
             for longitude, latitude, _ in track["points"]:
                 assert -180 <= longitude <= 180
                 assert -90 <= latitude <= 90
+
+
+def test_only_download_failures_fail_the_run():
+    assert exit_code({"licence": ["lion"], "failed": []}) == 0
+    assert exit_code({"licence": [], "failed": ["lion"]}) == 1
+    assert exit_code({"licence": [], "failed": []}) == 0

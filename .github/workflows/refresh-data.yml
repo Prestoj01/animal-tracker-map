@@ -1,0 +1,75 @@
+name: Refresh data
+
+# Rebuilds data/ from GBIF, Movebank and Wikipedia every week and commits any
+# changes, which redeploys the site. Run it by hand from the Actions tab too.
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays at 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Never run two refreshes at once: Movebank allows one request at a time.
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: pipeline
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+
+      # Each source is refreshed even if another fails. A species that fails
+      # keeps its previous data, so whatever did refresh can still be saved.
+      - name: Refresh sightings from GBIF
+        id: sightings
+        continue-on-error: true
+        run: python -m animal_tracker_pipeline.sightings
+      - name: Refresh tracks from Movebank
+        id: tracks
+        continue-on-error: true
+        env:
+          MOVEBANK_USERNAME: ${{ secrets.MOVEBANK_USERNAME }}
+          MOVEBANK_PASSWORD: ${{ secrets.MOVEBANK_PASSWORD }}
+        run: python -m animal_tracker_pipeline.tracks
+      - name: Refresh profiles from Wikipedia
+        id: profiles
+        continue-on-error: true
+        run: python -m animal_tracker_pipeline.profiles
+      - name: Update the data summary
+        run: python -m animal_tracker_pipeline.summary
+
+      # Nothing is committed unless the data passes the same checks as CI.
+      - name: Check the data
+        run: python -m pytest
+
+      - name: Commit changed data
+        working-directory: .
+        run: |
+          git add data
+          if git diff --cached --quiet; then
+            echo "No data changed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Refresh data from GBIF, Movebank and Wikipedia"
+          git pull --rebase
+          git push
+
+      # Fails the run, so GitHub sends an email, after saving what did work.
+      - name: Report sources that failed
+        if: steps.sightings.outcome == 'failure' || steps.tracks.outcome == 'failure' || steps.profiles.outcome == 'failure'
+        run: |
+          echo "::error::Refresh steps that failed: sightings=${{ steps.sightings.outcome }}, tracks=${{ steps.tracks.outcome }}, profiles=${{ steps.profiles.outcome }}. See their logs above."
+          exit 1

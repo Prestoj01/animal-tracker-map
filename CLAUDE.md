@@ -24,4 +24,5 @@ Static site showing ~25 species: sightings, migration tracks, conservation statu
 - refresh sightings (about 20 min): python -m animal_tracker_pipeline.sightings
 - refresh tracks: python -m animal_tracker_pipeline.tracks (reads Movebank login from .env)
 - refresh profiles (Wikipedia text and photos): python -m animal_tracker_pipeline.profiles
+- weekly refresh: .github/workflows/refresh-data.yml runs all three on Mondays and commits changed data; run it by hand from GitHub's Actions tab (Refresh data → Run workflow)
 - Commit and push directly to main. No branches or PRs. Run lint and tests before pushing.

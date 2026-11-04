@@ -172,7 +172,7 @@ def run(
         except MovebankLimitExceeded:
             raise
         except LicenceNotAccepted:
-            logger.error(
+            logger.warning(
                 "%s: accept the licence at %s",
                 entry.id,
                 study_url(TRACK_STUDIES[entry.id]),
@@ -196,6 +196,15 @@ def run(
     return problems
 
 
+def exit_code(problems: dict[str, list[str]]) -> int:
+    """Only download failures count as errors.
+
+    A licence still waiting to be accepted is expected, so the weekly refresh
+    shouldn't fail until every one is accepted.
+    """
+    return 1 if problems["failed"] else 0
+
+
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     try:
@@ -206,10 +215,10 @@ def main() -> int:
         return 1
     write_summary()
     if problems["licence"]:
-        logger.error("Licences to accept: %s", ", ".join(problems["licence"]))
+        logger.warning("Licences to accept: %s", ", ".join(problems["licence"]))
     if problems["failed"]:
         logger.error("Failed species: %s", ", ".join(problems["failed"]))
-    return 1 if problems["licence"] or problems["failed"] else 0
+    return exit_code(problems)
 
 
 if __name__ == "__main__":
