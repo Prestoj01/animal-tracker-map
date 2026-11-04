@@ -8,7 +8,7 @@ import { loadSightings } from "./sightings";
 import { createSightingsController } from "./sightingsController";
 import { loadSpecies } from "./species";
 import { copyText, readAnimals, withAnimals } from "./shareLink";
-import { renderSpeciesPicker, type PickerApi } from "./speciesPicker";
+import { renderSpeciesPicker, SURPRISE_COUNT, type PickerApi } from "./speciesPicker";
 import { loadSummary } from "./summary";
 import { loadTracks } from "./tracks";
 import "./style.css";
@@ -125,14 +125,23 @@ shareButton.addEventListener("click", async () => {
 // The welcome card's quick picks wait until the picker can act on them.
 const welcome = byId("welcome");
 let picker: PickerApi | null = null;
-const welcomeButtons = PRESETS.map((preset) => {
+const welcomeChoices = [
+  ...PRESETS.map((preset) => ({
+    text: `${preset.icon} ${preset.label}`,
+    pick: (api: PickerApi) => api.pick(preset.ids),
+  })),
+  { text: "🎲 Surprise me", pick: (api: PickerApi) => api.pickRandom(SURPRISE_COUNT) },
+];
+const welcomeButtons = welcomeChoices.map((choice) => {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "preset";
-  button.textContent = `${preset.icon} ${preset.label}`;
+  button.textContent = choice.text;
   button.disabled = true;
   button.addEventListener("click", () => {
-    picker?.pick(preset.ids);
+    if (picker) {
+      choice.pick(picker);
+    }
     // Get the drawer out of the way so the picks can be seen on the map.
     if (isPhone()) {
       sheet.set("peek");

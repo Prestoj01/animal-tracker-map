@@ -80,8 +80,8 @@ describe("createSightingsController", () => {
     expect(status.set).toHaveBeenCalledWith("Loading…");
 
     await flush();
-    expect(map.showSightings).toHaveBeenCalledWith("lion", "Lion", "#123456", [[1, 2]]);
-    expect(map.showTracks).toHaveBeenCalledWith("lion", "Lion", "#123456", tracks.tracks);
+    expect(map.showSightings).toHaveBeenCalledWith("lion", "🦁 Lion", "#123456", [[1, 2]]);
+    expect(map.showTracks).toHaveBeenCalledWith("lion", "🦁 Lion", "#123456", tracks.tracks);
     expect(status.set).toHaveBeenLastCalledWith("1 places · 1 tracked", undefined);
     expect(legend.textContent).toBe("Lion");
     expect(sources.textContent).toContain("Someone 2020 (CC BY, 2010–2012)");
@@ -154,6 +154,6 @@ describe("createSightingsController", () => {
     handlers.onSelect(lion, "#abcdef", status);
     await flush();
     expect(loadSightings).toHaveBeenCalledTimes(1);
-    expect(map.showSightings).toHaveBeenLastCalledWith("lion", "Lion", "#abcdef", [[1, 2]]);
+    expect(map.showSightings).toHaveBeenLastCalledWith("lion", "🦁 Lion", "#abcdef", [[1, 2]]);
   });
 });

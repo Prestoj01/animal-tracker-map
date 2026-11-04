@@ -69,3 +69,13 @@ export const PRESETS: Preset[] = [
     ids: ["lion", "african-bush-elephant", "giraffe", "white-rhino"],
   },
 ];
+
+/** `count` different ids picked at random, for the "Surprise me" button. */
+export function randomPick(ids: string[], count: number, random = Math.random): string[] {
+  const pool = [...ids];
+  const picked: string[] = [];
+  while (picked.length < count && pool.length > 0) {
+    picked.push(...pool.splice(Math.floor(random() * pool.length), 1));
+  }
+  return picked;
+}

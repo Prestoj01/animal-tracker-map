@@ -694,17 +694,130 @@ button:disabled {
   background: var(--accent);
 }
 
-/* Start screen and sidebar toggle */
+/* Playful touches */
+
+@keyframes card-pop {
+  0% {
+    transform: scale(1);
+  }
+
+  40% {
+    transform: scale(1.06);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes icon-wiggle {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+
+  20% {
+    transform: rotate(-14deg) scale(1.15);
+  }
+
+  45% {
+    transform: rotate(10deg) scale(1.15);
+  }
+
+  70% {
+    transform: rotate(-5deg);
+  }
+}
+
+@keyframes chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.9);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+}
+
+.card-icon {
+  display: inline-block;
+  transition: transform 200ms;
+}
+
+.species-card:hover:not(:has(input:disabled)) .card-icon {
+  transform: translateY(-3px) scale(1.08);
+}
+
+.species-card:has(input:checked) {
+  animation: card-pop 350ms ease-out;
+}
+
+.species-card:has(input:checked) .card-icon {
+  animation: icon-wiggle 600ms ease-in-out;
+}
+
+.chip {
+  animation: chip-in 200ms ease-out;
+}
 
 .welcome {
+  animation: fade-up 500ms ease-out;
+}
+
+.preset {
+  transition:
+    border-color 150ms,
+    transform 150ms;
+}
+
+.preset:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.preset-surprise {
+  border-color: rgb(57 135 229 / 50%);
+}
+
+/* A faint starfield shows around the globe when zoomed out. */
+#map {
+  background:
+    radial-gradient(1px 1px at 12% 18%, rgb(255 255 255 / 60%), transparent),
+    radial-gradient(1px 1px at 78% 12%, rgb(255 255 255 / 50%), transparent),
+    radial-gradient(1.5px 1.5px at 33% 72%, rgb(255 255 255 / 45%), transparent),
+    radial-gradient(1px 1px at 88% 64%, rgb(255 255 255 / 55%), transparent),
+    radial-gradient(1px 1px at 55% 35%, rgb(255 255 255 / 35%), transparent),
+    radial-gradient(1.5px 1.5px at 8% 88%, rgb(255 255 255 / 40%), transparent),
+    radial-gradient(1px 1px at 66% 90%, rgb(255 255 255 / 45%), transparent),
+    radial-gradient(1px 1px at 95% 30%, rgb(255 255 255 / 35%), transparent),
+    radial-gradient(ellipse at center, #0b1420 0%, #050608 70%);
+  background-size:
+    220px 220px,
+    260px 260px,
+    300px 300px,
+    240px 240px,
+    180px 180px,
+    280px 280px,
+    320px 320px,
+    200px 200px,
+    100% 100%;
+}
+
+/* Start screen and sidebar toggle */
+
+/* Low on the map, so the turning globe stays in view above it. */
+.welcome {
   position: absolute;
-  top: 50%;
+  bottom: 3rem;
   left: 50%;
   box-sizing: border-box;
   width: min(26rem, calc(100% - 2rem));
   padding: 1.25rem 1.5rem;
   text-align: center;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
 }
 
 .welcome h2 {
@@ -849,8 +962,9 @@ button:disabled {
     display: flex;
   }
 
+  /* The drawer already offers the quick picks, so the globe gets the space. */
   .welcome {
-    top: 30%;
+    display: none;
   }
 
   .profile {
@@ -886,5 +1000,6 @@ button:disabled {
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
+    animation: none !important;
   }
 }

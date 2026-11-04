@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import speciesList from "../../data/species.json";
-import { GROUPS, PRESETS, speciesGroup, speciesIcon } from "./catalog";
+import { GROUPS, PRESETS, randomPick, speciesGroup, speciesIcon } from "./catalog";
 import { SERIES_COLORS } from "./speciesPicker";
 
 const ids = new Set(speciesList.map((species) => species.id));
@@ -28,3 +28,17 @@ describe("catalog", () => {
     }
   });
 });
+
+describe("randomPick", () => {
+  it("picks the requested number of different ids", () => {
+    const picked = randomPick(["a", "b", "c", "d"], 3);
+    expect(picked).toHaveLength(3);
+    expect(new Set(picked).size).toBe(3);
+  });
+
+  it("follows the random source, and stops when it runs out of ids", () => {
+    expect(randomPick(["a", "b", "c"], 2, () => 0)).toEqual(["a", "b"]);
+    expect(randomPick(["a", "b"], 5, () => 0.99)).toEqual(["b", "a"]);
+  });
+});
+

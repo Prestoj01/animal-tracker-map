@@ -1,4 +1,4 @@
-import { groupOrder, PRESETS, speciesGroup, speciesIcon } from "./catalog";
+import { groupOrder, PRESETS, randomPick, speciesGroup, speciesIcon } from "./catalog";
 import type { Species } from "./species";
 import type { Summary } from "./summary";
 
@@ -33,7 +33,12 @@ export interface PickerOptions {
 export interface PickerApi {
   /** Replaces the selection with these species, as far as the colour limit allows. */
   pick(ids: string[]): void;
+  /** Replaces the selection with `count` animals chosen at random. */
+  pickRandom(count: number): void;
 }
+
+/** How many animals "Surprise me" picks: enough to compare, and room for one more. */
+export const SURPRISE_COUNT = 3;
 
 function showMessage(container: HTMLElement, text: string): HTMLElement {
   const message = document.createElement("p");
@@ -266,6 +271,9 @@ function showPicker(
       }
       refresh();
     },
+    pickRandom(count) {
+      api.pick(randomPick([...cardOf.keys()], count));
+    },
   };
 
   for (const preset of PRESETS) {
@@ -278,6 +286,10 @@ function showPicker(
     button.addEventListener("click", () => api.pick(available));
     presets.append(button);
   }
+  const surprise = element("button", "preset preset-surprise", "🎲 Surprise me");
+  surprise.type = "button";
+  surprise.addEventListener("click", () => api.pickRandom(SURPRISE_COUNT));
+  presets.append(surprise);
 
   const sections = groupOrder()
     .map((group) => {

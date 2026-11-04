@@ -20,6 +20,9 @@ const mock = vi.hoisted(() => ({
   sources: new Map<string, { data: { features: FakeFeature[] } }>(),
   failToConstruct: false,
   fits: [] as unknown[],
+  projection: null as unknown,
+  center: 0,
+  eases: 0,
 }));
 
 // jsdom has no WebGL, so the real library cannot run here.
@@ -63,6 +66,26 @@ vi.mock("maplibre-gl", () => ({
     }
     fitBounds(bounds: unknown) {
       mock.fits.push(bounds);
+    }
+    setPaintProperty(id: string, name: string, value: unknown) {
+      const layer = mock.layers.get(id);
+      if (layer) {
+        layer.paint[name] = value;
+      }
+    }
+    getLayer(id: string) {
+      return mock.layers.get(id);
+    }
+    setProjection(projection: unknown) {
+      mock.projection = projection;
+    }
+    setSky() {}
+    getCenter() {
+      return { lng: mock.center, lat: 0 };
+    }
+    easeTo({ center }: { center: { lng: number } }) {
+      mock.center = center.lng;
+      mock.eases += 1;
     }
     getPaintProperty(id: string, name: string) {
       return mock.layers.get(id)?.paint[name];
@@ -110,6 +133,9 @@ beforeEach(() => {
   mock.sources.clear();
   mock.failToConstruct = false;
   mock.fits = [];
+  mock.projection = null;
+  mock.center = 0;
+  mock.eases = 0;
   status = document.createElement("p");
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.useFakeTimers();
@@ -342,5 +368,64 @@ describe("createMap", () => {
     stop();
     expect(onEnd).toHaveBeenCalledTimes(2);
     expect(mock.sources.get("tracks-lion")?.data.features[0].geometry.coordinates).toHaveLength(3);
+  });
+
+  it("shows the world as a globe that turns until someone touches it", () => {
+    loadedMap();
+    expect(mock.projection).toEqual({ type: "globe" });
+    expect(mock.eases).toBe(1);
+    expect(mock.center).toBeLessThan(0);
+
+    mock.handlers.get("moveend")?.({});
+    expect(mock.eases).toBe(2);
+
+    mock.handlers.get("mousedown")?.({});
+    mock.handlers.get("moveend")?.({});
+    expect(mock.eases).toBe(2);
+  });
+
+  it("stops turning once an animal is shown", () => {
+    const map = loadedMap();
+    map.showSightings("lion", "Lion", "#000", [[1, 2]]);
+
+    mock.handlers.get("moveend")?.({});
+    expect(mock.eases).toBe(1);
+  });
+
+  it("stays still for people who prefer reduced motion", () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    const map = loadedMap();
+    map.showSightings("lion", "Lion", "#000", [[1, 2]]);
+
+    expect(mock.eases).toBe(0);
+    expect(mock.layers.get("sightings-lion")?.paint["circle-radius"]).toBe(4);
+    vi.unstubAllGlobals();
+  });
+
+  it("grows new dots from nothing to full size", () => {
+    const map = loadedMap();
+    map.showSightings("lion", "Lion", "#000", [[1, 2]]);
+    expect(mock.layers.get("sightings-lion")?.paint["circle-radius"]).toBe(0);
+
+    vi.advanceTimersByTime(20);
+    expect(mock.layers.get("sightings-lion")?.paint["circle-radius"]).toBe(4);
+  });
+
+  it("frames animals picked before the map has loaded once it loads", () => {
+    const map = start();
+    map.showSightings("lion", "Lion", "#000", [
+      [10, -5],
+      [30, 5],
+    ]);
+    vi.advanceTimersByTime(250);
+    expect(mock.fits).toEqual([]);
+
+    mock.handlers.get("load")?.({});
+    expect(mock.fits).toEqual([
+      [
+        [10, -5],
+        [30, 5],
+      ],
+    ]);
   });
 });

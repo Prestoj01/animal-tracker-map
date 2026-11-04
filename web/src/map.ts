@@ -22,6 +22,13 @@ const FIT_DELAY_MS = 250;
 const PLAY_DURATION_MS = 12000;
 // Redrawing every animal's line is costly, so the replay updates about 30 times a second.
 const PLAY_FRAME_MS = 33;
+const DOT_RADIUS = 4;
+// One full turn of the globe on the start screen takes this long.
+const SPIN_SECONDS_PER_TURN = 120;
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+}
 const FAILED_MESSAGE = "The map could not be loaded. Check your connection and reload the page.";
 
 export type LayerKind = "sightings" | "tracks";
@@ -64,7 +71,8 @@ export function createMap(
       container,
       style: STYLE_URL,
       center: [0, 20],
-      zoom: 1,
+      // Large enough for the globe to fill the view on the start screen.
+      zoom: 1.6,
       attributionControl: { customAttribution: "Sightings: GBIF.org | Tracks: Movebank" },
     });
   } catch (error) {
@@ -97,11 +105,37 @@ export function createMap(
     show(FAILED_MESSAGE);
   }, LOAD_TIMEOUT_MS);
 
+  // A slowly turning globe until someone touches the map or picks an animal.
+  let spinning = !prefersReducedMotion();
+  const stopSpin = () => {
+    spinning = false;
+  };
+  const spin = () => {
+    if (!spinning) {
+      return;
+    }
+    const center = map.getCenter();
+    center.lng -= 360 / SPIN_SECONDS_PER_TURN;
+    map.easeTo({ center, duration: 1000, easing: (t) => t });
+  };
+  for (const event of ["mousedown", "touchstart", "wheel", "dragstart"] as const) {
+    map.on(event, stopSpin);
+  }
+  map.on("moveend", spin);
+
   map.on("load", () => {
     loaded = true;
     clearTimeout(timer);
     status.hidden = true;
+    // Zoomed out the world is a globe; it flattens into a normal map as you zoom in.
+    map.setProjection({ type: "globe" });
+    map.setSky({
+      "sky-color": "#0c1a2e",
+      "horizon-color": "#1c3354",
+      "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 5, 1, 7, 0],
+    });
     whenLoaded.splice(0).forEach((run) => run());
+    spin();
   });
 
   map.on("error", ({ error }) => {
@@ -130,12 +164,19 @@ export function createMap(
       ]);
     }
     clearTimeout(fitTimer);
-    fitTimer = setTimeout(() => {
+    stopSpin();
+    const fit = () => {
       const boxes = [...extents.values()];
-      if (!loaded || boxes.length === 0) {
+      if (boxes.length === 0) {
         return;
       }
-      const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      // Animals picked before the map is ready, such as from a shared link, are
+      // framed once it is.
+      if (!loaded) {
+        whenLoaded.push(fit);
+        return;
+      }
+      const reduceMotion = prefersReducedMotion();
       map.fitBounds(
         [
           [Math.min(...boxes.map((box) => box[0])), Math.min(...boxes.map((box) => box[1]))],
@@ -143,7 +184,8 @@ export function createMap(
         ],
         { padding: 48, maxZoom: 5, duration: reduceMotion ? 0 : 1200 },
       );
-    }, FIT_DELAY_MS);
+    };
+    fitTimer = setTimeout(fit, FIT_DELAY_MS);
   };
   const visible: Record<LayerKind, boolean> = { sightings: true, tracks: true };
   const layers = new Set<string>();
@@ -172,6 +214,15 @@ export function createMap(
       kind === "tracks" ? firstSightings : undefined,
     );
     layers.add(layer);
+    if (kind === "sightings" && !prefersReducedMotion()) {
+      // Dots start as points and grow to full size, rather than popping in. The
+      // change waits a frame so the starting size is drawn first.
+      requestAnimationFrame(() => {
+        if (map.getLayer(layer)) {
+          map.setPaintProperty(layer, "circle-radius", DOT_RADIUS);
+        }
+      });
+    }
     // Naming the species on hover means identity never depends on colour alone.
     map.on("mousemove", layer, (event) => {
       map.getCanvas().style.cursor = "pointer";
@@ -205,6 +256,7 @@ export function createMap(
     });
 
   const HEADS = layerId("tracks", "replay-heads");
+  const GLOW = layerId("tracks", "replay-glow");
 
   const drawFrame = (progress: number) => {
     const heads: GeoJSON.Feature[] = [];
@@ -230,6 +282,19 @@ export function createMap(
       return;
     }
     map.addSource(HEADS, { type: "geojson", data });
+    // A soft glow beneath each moving dot, which pulses while the replay runs.
+    map.addLayer({
+      id: GLOW,
+      type: "circle",
+      source: HEADS,
+      paint: {
+        "circle-color": ["get", "color"],
+        "circle-radius": 14,
+        "circle-blur": 0.8,
+        "circle-opacity": 0.9,
+      },
+      layout: { visibility: visible.tracks ? "visible" : "none" },
+    });
     map.addLayer({
       id: HEADS,
       type: "circle",
@@ -242,7 +307,14 @@ export function createMap(
       },
       layout: { visibility: visible.tracks ? "visible" : "none" },
     });
+    layers.add(GLOW);
     layers.add(HEADS);
+  };
+
+  const pulse = (elapsed: number) => {
+    if (map.getLayer(GLOW) && !prefersReducedMotion()) {
+      map.setPaintProperty(GLOW, "circle-radius", 14 + 6 * Math.sin(elapsed / 150));
+    }
   };
 
   const whenReady = (key: string, run: () => void) => {
@@ -272,7 +344,8 @@ export function createMap(
       whenReady(layerId("sightings", id), () =>
         add("sightings", id, name, features, {
           "circle-color": color,
-          "circle-radius": 4,
+          "circle-radius": prefersReducedMotion() ? DOT_RADIUS : 0,
+          "circle-radius-transition": { duration: 600, delay: 0 },
           "circle-opacity": 0.9,
           // A dark ring keeps overlapping dots apart.
           "circle-stroke-color": "#0c0c0c",
@@ -332,6 +405,7 @@ export function createMap(
           return;
         }
         drawFrame(progress);
+        pulse(Date.now() - started);
         timer = setTimeout(step, PLAY_FRAME_MS);
       };
       step();

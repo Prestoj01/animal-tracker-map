@@ -256,4 +256,17 @@ describe("renderSpeciesPicker", () => {
     (container.querySelector(".chip-name") as HTMLButtonElement).click();
     expect(onShowProfile).toHaveBeenLastCalledWith(manySpecies[0]);
   });
+
+  it("picks three random animals with Surprise me", async () => {
+    await renderSpeciesPicker(container, async () => manySpecies, handlers);
+    toggle("s0");
+
+    const surprise = [...container.querySelectorAll(".preset")].find((button) =>
+      button.textContent?.includes("Surprise me"),
+    ) as HTMLButtonElement;
+    surprise.click();
+
+    const picked = [...container.querySelectorAll<HTMLInputElement>("input:checked")];
+    expect(picked).toHaveLength(3);
+  });
 });

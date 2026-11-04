@@ -1,3 +1,4 @@
+import { speciesIcon } from "./catalog";
 import type { SightingsMap } from "./map";
 import type { Sightings } from "./sightings";
 import type { Species } from "./species";
@@ -33,6 +34,11 @@ function cached<T>(load: (id: string) => Promise<T>): (id: string) => Promise<T>
     }
     return request;
   };
+}
+
+/** How the map names an animal on hover, e.g. "🦁 Lion". */
+function label(species: Species): string {
+  return `${speciesIcon(species.id)} ${species.commonName}`;
 }
 
 function sourceEntry(species: Species, study: NonNullable<Tracks["study"]>): HTMLElement {
@@ -143,7 +149,7 @@ export function createSightingsController(
           return;
         }
         if (points.length > 0) {
-          map.showSightings(species.id, species.commonName, color, points);
+          map.showSightings(species.id, label(species), color, points);
           addLegend(species, color);
         }
         states.set("sightings", {
@@ -159,7 +165,7 @@ export function createSightingsController(
           return;
         }
         if (study && tracks.length > 0) {
-          map.showTracks(species.id, species.commonName, color, tracks);
+          map.showTracks(species.id, label(species), color, tracks);
           addLegend(species, color);
           sourceEntries.set(species.id, sourceEntry(species, study));
           renderPanels();
