@@ -7,6 +7,7 @@ it occurs rather than how heavily each country is recorded. Run with:
 
 import logging
 import sys
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -105,9 +106,13 @@ def records_per_country(counts: dict[str, int], total: int) -> dict[str, int]:
 
 
 def to_points(
-    records: list[dict[str, Any]], excluded: set[str]
+    records: list[dict[str, Any]], excluded: set[str], datasets: Counter[str]
 ) -> set[tuple[float, float, int | None]]:
-    """Rounded places with their year, leaving out records from excluded countries."""
+    """Rounded places with their year, leaving out records from excluded countries.
+
+    Counts each used record against its GBIF dataset in `datasets`, for the
+    derived-dataset citation (see citation.py).
+    """
     points = set()
     for record in records:
         longitude = record.get("decimalLongitude")
@@ -116,6 +121,8 @@ def to_points(
             continue
         if record.get("countryCode") in excluded:
             continue
+        if "datasetKey" in record:
+            datasets[record["datasetKey"]] += 1
         year = record.get("year")
         points.add(
             (
@@ -128,7 +135,10 @@ def to_points(
 
 
 def history_points(
-    client: GbifClient, filters: dict[str, Any], excluded: set[str]
+    client: GbifClient,
+    filters: dict[str, Any],
+    excluded: set[str],
+    datasets: Counter[str],
 ) -> set[tuple[float, float, int | None]]:
     """A sample from each older period, which the country sample barely reaches."""
     points = set()
@@ -136,7 +146,7 @@ def history_points(
         results = client.get(
             "occurrence/search", {**filters, "year": years, "limit": PER_PERIOD}
         )["results"]
-        points.update(to_points(results, excluded))
+        points.update(to_points(results, excluded, datasets))
     return points
 
 
@@ -158,21 +168,36 @@ def fetch_sightings(client: GbifClient, species: Species) -> dict[str, Any]:
     # The year is kept so the site can show how sightings change over time. A
     # place seen in several years appears once per year.
     points: set[tuple[float, float, int | None]] = set()
+    datasets: Counter[str] = Counter()
     for country, limit in records_per_country(counts, total).items():
         results = client.get(
             "occurrence/search", {**filters, "country": country, "limit": limit}
         )["results"]
-        points.update(to_points(results, excluded))
-    points.update(history_points(client, filters, excluded))
+        points.update(to_points(results, excluded, datasets))
+    points.update(history_points(client, filters, excluded, datasets))
     return {
         "speciesId": species.id,
         "totalRecords": total,
         "points": sorted(points, key=lambda point: (point[0], point[1], point[2] or 0)),
+        "datasets": dict(sorted(datasets.items())),
     }
 
 
 def write_sightings(sightings: dict[str, Any], output_dir: Path) -> Path:
-    return write_json_gz(sightings, output_dir / f"{sightings['speciesId']}.json.gz")
+    """Writes the points for the site, and the dataset counts beside them.
+
+    The counts are only for the GBIF citation, so they go in their own file in
+    a gbif-datasets folder next to output_dir, keeping the site's downloads small.
+    """
+    species_id = sightings["speciesId"]
+    points = {key: value for key, value in sightings.items() if key != "datasets"}
+    path = write_json_gz(points, output_dir / f"{species_id}.json.gz")
+    if "datasets" in sightings:
+        write_json_gz(
+            {"speciesId": species_id, "datasets": sightings["datasets"]},
+            output_dir.parent / "gbif-datasets" / f"{species_id}.json.gz",
+        )
+    return path
 
 
 def run(client: GbifClient, species: list[Species], output_dir: Path) -> list[str]:

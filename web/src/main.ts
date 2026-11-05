@@ -1,6 +1,7 @@
 import { createBottomSheet } from "./bottomSheet";
 import { createComparePanel, type Picked } from "./compare";
 import { createGame } from "./game";
+import { citationNodes, loadGbifCitation } from "./gbifCitation";
 import { PRESETS } from "./catalog";
 import { createLazyMap } from "./lazyMap";
 import type { LayerKind } from "./map";
@@ -280,4 +281,12 @@ void renderSpeciesPicker(
       }
     },
   },
+);
+
+// The plain GBIF credit shows until the registered citation, with its DOI, loads.
+const gbifCredit = byId("gbif-credit");
+gbifCredit.replaceChildren(...citationNodes(null));
+loadGbifCitation().then(
+  (citation) => gbifCredit.replaceChildren(...citationNodes(citation)),
+  (error: unknown) => console.error("Could not load the GBIF citation", error),
 );

@@ -589,6 +589,15 @@ button:disabled {
   list-style: none;
 }
 
+.gbif-credit {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.sources + .sources {
+  margin-top: 0.75rem;
+}
+
 .sources li {
   margin-bottom: 0.5rem;
   overflow-wrap: anywhere;

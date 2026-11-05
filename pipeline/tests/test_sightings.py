@@ -49,12 +49,13 @@ class FakeClient:
         return {"results": self.results.get(params["country"], [])}
 
 
-def record(longitude, latitude, year=2020, country="KE"):
+def record(longitude, latitude, year=2020, country="KE", dataset="d1"):
     return {
         "decimalLongitude": longitude,
         "decimalLatitude": latitude,
         "year": year,
         "countryCode": country,
+        "datasetKey": dataset,
     }
 
 
@@ -70,6 +71,7 @@ def test_rounds_and_deduplicates_points():
         "speciesId": "lion",
         "totalRecords": 2,
         "points": [(1.0, 2.0, 2020), (36.8, -1.3, 2020)],
+        "datasets": {"d1": 3},
     }
 
 
@@ -114,6 +116,25 @@ def test_samples_each_older_period_outside_excluded_countries():
     assert periods == HISTORY_PERIODS
     # Counts come from the country facets alone, as before.
     assert sightings["totalRecords"] == 1
+
+
+def test_counts_records_used_from_each_dataset_for_the_citation():
+    client = FakeClient(
+        {"KE": 3, "US": 1},
+        {
+            "KE": [
+                record(36.8, -1.3, dataset="a"),
+                record(36.8, -1.3, dataset="a"),
+                record(37.0, -1.0, dataset="b"),
+                {"decimalLatitude": 1.0, "datasetKey": "c"},
+            ]
+        },
+        history={"1990,1999": [record(-83.1, 40.2, 1995, "US", "d")]},
+    )
+
+    # Repeated places still count, as each record was used; records without
+    # coordinates or from excluded countries don't.
+    assert fetch_sightings(client, LION)["datasets"] == {"a": 2, "b": 1}
 
 
 def test_skips_records_without_coordinates():
@@ -168,6 +189,25 @@ def test_country_shares_stay_within_limits():
     assert shares == {"US": MAX_PER_COUNTRY, "CA": MIN_PER_COUNTRY, "MX": 3}
 
 
+def test_dataset_counts_are_written_beside_the_points(tmp_path):
+    sightings_dir = tmp_path / "sightings"
+    sightings = {
+        "speciesId": "lion",
+        "totalRecords": 1,
+        "points": [(1.0, 2.0, 2020)],
+        "datasets": {"a": 1},
+    }
+
+    path = write_sightings(sightings, sightings_dir)
+
+    assert "datasets" not in json.loads(gzip.decompress(path.read_bytes()))
+    counts = tmp_path / "gbif-datasets" / "lion.json.gz"
+    assert json.loads(gzip.decompress(counts.read_bytes())) == {
+        "speciesId": "lion",
+        "datasets": {"a": 1},
+    }
+
+
 def test_written_file_is_gzip_json_and_reproducible(tmp_path):
     sightings = {"speciesId": "lion", "totalRecords": 1, "points": [(1.0, 2.0)]}
 
@@ -207,6 +247,9 @@ def test_every_species_has_a_valid_committed_file():
         )
         assert data["speciesId"] == species.id
         assert data["points"], species.id
+        assert "datasets" not in data, "dataset counts belong in data/gbif-datasets"
+        counts = OUTPUT_DIR.parent / "gbif-datasets" / f"{species.id}.json.gz"
+        assert json.loads(gzip.decompress(counts.read_bytes()))["datasets"], species.id
         for longitude, latitude, year in data["points"]:
             assert -180 <= longitude <= 180
             assert -90 <= latitude <= 90

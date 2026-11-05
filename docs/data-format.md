@@ -31,6 +31,19 @@ The points show where a species has been recorded, not how many animals are ther
 - **Excluded countries:** `EXCLUDED_COUNTRIES` lists countries outside a species' range, where records are captive or misidentified. It was written by hand from GBIF's per-country counts, so review it when species change.
 - **Grey wolf:** GBIF files domestic dogs and dingoes under *Canis lupus*, so wolves are queried by their wild taxa using `TAXON_FILTERS`.
 
+## `data/gbif-datasets/<species id>.json.gz`
+
+Gzipped JSON, `{ "speciesId": ..., "datasets": { "<GBIF dataset key>": <records used> } }`, written by the sightings pipeline beside each sightings file. It counts every record that produced a point, including repeats of a place, and leaves out records without coordinates or from excluded countries. The site doesn't load these; they exist for the GBIF citation.
+
+## `data/gbif-citation.json`
+
+The sightings' citation, written by `python -m animal_tracker_pipeline.citation --register`, which registers them with GBIF as a derived dataset and gets a DOI. Fields: `doi`, `url`, `citation` (such as "GBIF.org (5 November 2026) Derived dataset https://doi.org/..."), `registered`, `records`, `datasets` and `fingerprint`.
+
+- **Until it exists**, the site credits "GBIF.org" without a DOI.
+- **Registering is permanent and public**, so it's never automatic. Run the command without `--register` to preview the counts first.
+- **Duplicates:** the fingerprint identifies the dataset counts, so registering unchanged data again does nothing. After a weekly refresh changes the sample, registering again creates a new DOI; doing that occasionally, such as before sharing the site widely, is enough.
+- **Source link:** the registration points to `data/sightings` in this repository, so the repository must stay public.
+
 ## `data/tracks/<species id>.json.gz`
 
 Gzipped JSON, generated from Movebank by `pipeline/src/animal_tracker_pipeline/tracks.py` and read by `web/src/tracks.ts`.

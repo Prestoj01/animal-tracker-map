@@ -40,6 +40,17 @@ python -m pytest
 
 The format of the shared data files is described in [docs/data-format.md](docs/data-format.md).
 
+### GBIF citation
+
+GBIF asks that data from its search API be cited with a DOI, by registering a "derived dataset" that lists the source datasets. To get one, with `GBIF_USERNAME` and `GBIF_PASSWORD` in `.env`:
+
+```sh
+python -m animal_tracker_pipeline.citation             # preview the counts
+python -m animal_tracker_pipeline.citation --register  # create the DOI
+```
+
+Registering creates a permanent public record under your GBIF account. It writes `data/gbif-citation.json`; commit it and the site shows the citation.
+
 ## Data refresh
 
 Every Monday, the `Refresh data` GitHub Actions workflow refreshes sightings (GBIF), tracks (Movebank) and profiles (Wikipedia), checks the data with the pipeline tests, and commits any changes to `main`, which redeploys the site.
