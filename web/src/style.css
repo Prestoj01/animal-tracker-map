@@ -358,6 +358,81 @@ button:disabled {
   color: var(--text);
 }
 
+/* Near me */
+
+.near-me {
+  margin-bottom: 1.25rem;
+}
+
+.near-me-button {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.nearby {
+  margin-top: 0.625rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.nearby h2 {
+  margin: 0 0 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.nearby-message,
+.nearby-note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+}
+
+.nearby-note {
+  margin-top: 0.625rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.nearby-list {
+  display: grid;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nearby-list li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.nearby-distance {
+  grid-row: 2;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.nearby-show {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+}
+
+.nearby-actions {
+  display: flex;
+  gap: 0.375rem;
+  margin-top: 0.75rem;
+}
+
 .species-search {
   box-sizing: border-box;
   width: 100%;

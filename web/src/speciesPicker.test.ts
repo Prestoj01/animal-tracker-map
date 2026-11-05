@@ -275,6 +275,22 @@ describe("renderSpeciesPicker", () => {
     expect(picked).toHaveLength(3);
   });
 
+  it("adds one animal without changing the others, until colours run out", async () => {
+    let api: PickerApi | undefined;
+    await renderSpeciesPicker(container, async () => manySpecies, handlers, {
+      onReady: (ready) => (api = ready),
+    });
+    toggle("s0");
+
+    expect(api?.add("s5")).toBe(true);
+    expect(checkbox("s0").checked && checkbox("s5").checked).toBe(true);
+    expect(api?.add("s5")).toBe(true);
+    expect(api?.add("s6")).toBe(true);
+    expect(api?.add("s7")).toBe(true);
+    expect(api?.add("s8")).toBe(false);
+    expect(api?.add("missing")).toBe(false);
+  });
+
   it("filters cards and groups as you type, with an empty state", async () => {
     const mixed: Species[] = [
       { id: "lion", commonName: "Lion", scientificName: "Panthera leo" },

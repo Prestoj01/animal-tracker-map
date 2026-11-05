@@ -38,6 +38,7 @@ export function createLazyMap(
     showTracks: (...args) => later((map) => map.showTracks(...args)),
     hideSpecies: (...args) => later((map) => map.hideSpecies(...args)),
     setKindVisible: (...args) => later((map) => map.setKindVisible(...args)),
+    showYouAreHere: (...args) => later((map) => map.showYouAreHere(...args)),
     playTracks(handlers) {
       // There is nothing to replay until the map exists.
       if (!map) {

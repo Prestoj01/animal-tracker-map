@@ -35,6 +35,8 @@ export interface PickerApi {
   pick(ids: string[]): void;
   /** Replaces the selection with `count` animals chosen at random. */
   pickRandom(count: number): void;
+  /** Adds one animal to the selection; false if every colour is in use. */
+  add(id: string): boolean;
 }
 
 /** How many animals "Surprise me" picks: enough to compare, and room for one more. */
@@ -290,6 +292,18 @@ function showPicker(
     },
     pickRandom(count) {
       api.pick(randomPick([...cardOf.keys()], count));
+    },
+    add(id) {
+      const card = cardOf.get(id);
+      if (!card) {
+        return false;
+      }
+      if (card.checkbox.checked) {
+        return true;
+      }
+      const added = select(card);
+      refresh();
+      return added;
     },
   };
 

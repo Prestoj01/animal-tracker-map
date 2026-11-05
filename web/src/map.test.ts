@@ -428,4 +428,26 @@ describe("createMap", () => {
       ],
     ]);
   });
+
+  it("marks the reader's location above every animal and frames it", () => {
+    const map = start();
+    map.showYouAreHere([10, 20]);
+    expect(mock.layers.has("you-are-here")).toBe(false);
+
+    mock.handlers.get("load")?.({});
+    expect(mock.layers.has("you-are-here")).toBe(true);
+    map.showSightings("lion", "Lion", "#f00", [[1, 2]]);
+    map.showTracks("lion", "Lion", "#f00", [line([1, 2], [3, 4])]);
+    expect(mock.layerOrder.at(-1)).toBe("you-are-here");
+
+    vi.advanceTimersByTime(1000);
+    expect(mock.fits.at(-1)).toEqual([
+      [1, 2],
+      [10, 20],
+    ]);
+
+    // Switching animals' layers off leaves the marker.
+    map.setKindVisible("sightings", false);
+    expect(mock.layers.get("you-are-here")?.layout).toBeUndefined();
+  });
 });

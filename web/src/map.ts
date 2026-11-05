@@ -39,6 +39,8 @@ export interface SightingsMap {
   /** Removes both kinds of layer for a species. */
   hideSpecies(id: string): void;
   setKindVisible(kind: LayerKind, visible: boolean): void;
+  /** Marks the reader's own location, and keeps it in view alongside the animals. */
+  showYouAreHere(point: Point): void;
   /** Replays every track on the map from its start; returns a way to stop early. */
   playTracks(handlers: { onProgress(progress: number): void; onEnd(): void }): () => void;
 }
@@ -83,6 +85,7 @@ export function createMap(
       showSightings() {},
       showTracks() {},
       hideSpecies() {},
+      showYouAreHere() {},
       setKindVisible() {},
       playTracks: ({ onEnd }) => {
         onEnd();
@@ -148,6 +151,7 @@ export function createMap(
   });
 
   const popup = new Popup({ closeButton: false, closeOnClick: false });
+  const YOU = "you-are-here";
 
   // Each species' west, south, east and north edges, so the map can frame them all.
   const extents = new Map<string, [number, number, number, number]>();
@@ -201,8 +205,10 @@ export function createMap(
   ) => {
     const layer = layerId(kind, id);
     map.addSource(layer, { type: "geojson", data: { type: "FeatureCollection", features } });
-    // Tracks go under every sightings layer, so dots stay on top of lines.
-    const firstSightings = [...layers].find((name) => name.startsWith("sightings-"));
+    // Tracks go under every sightings layer, so dots stay on top of lines, and
+    // the reader's own marker stays on top of everything.
+    const you = map.getLayer(YOU) ? YOU : undefined;
+    const firstSightings = [...layers].find((name) => name.startsWith("sightings-")) ?? you;
     map.addLayer(
       {
         id: layer,
@@ -211,7 +217,7 @@ export function createMap(
         paint,
         layout: { visibility: visible[kind] ? "visible" : "none" },
       } as LayerSpecification,
-      kind === "tracks" ? firstSightings : undefined,
+      kind === "tracks" ? firstSightings : you,
     );
     layers.add(layer);
     if (kind === "sightings" && !prefersReducedMotion()) {
@@ -384,6 +390,38 @@ export function createMap(
         }
       }
       popup.remove();
+    },
+    showYouAreHere(point) {
+      // Kept with the animals' areas, so the map frames the reader and them together.
+      extend(YOU, [point]);
+      const data: GeoJSON.FeatureCollection = {
+        type: "FeatureCollection",
+        features: [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: point } }],
+      };
+      whenReady(YOU, () => {
+        const source = map.getSource<GeoJSONSource>(YOU);
+        if (source) {
+          source.setData(data);
+          return;
+        }
+        map.addSource(YOU, { type: "geojson", data });
+        // Not in `layers`, so it stays when sightings or tracks are switched off.
+        map.addLayer({
+          id: YOU,
+          type: "circle",
+          source: YOU,
+          paint: {
+            "circle-color": "#f0efec",
+            "circle-radius": 6,
+            "circle-stroke-color": "#3987e5",
+            "circle-stroke-width": 3,
+          },
+        });
+        map.on("mousemove", YOU, (event) => {
+          popup.setLngLat(event.lngLat).setText("📍 You are here").addTo(map);
+        });
+        map.on("mouseleave", YOU, () => popup.remove());
+      });
     },
     playTracks({ onProgress, onEnd }) {
       if (!loaded || trackData.size === 0) {

@@ -35,6 +35,7 @@ const map = {
   showTracks: vi.fn(),
   hideSpecies: vi.fn(),
   setKindVisible: vi.fn(),
+  showYouAreHere: vi.fn(),
   playTracks: vi.fn(),
 };
 const status = { set: vi.fn() };

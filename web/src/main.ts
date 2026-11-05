@@ -2,6 +2,7 @@ import { createBottomSheet } from "./bottomSheet";
 import { PRESETS } from "./catalog";
 import { createLazyMap } from "./lazyMap";
 import type { LayerKind } from "./map";
+import { createNearMe, locate } from "./nearMe";
 import { createProfilePanel } from "./profilePanel";
 import { loadProfiles } from "./profiles";
 import { loadSightings } from "./sightings";
@@ -125,12 +126,35 @@ shareButton.addEventListener("click", async () => {
 // The welcome card's quick picks wait until the picker can act on them.
 const welcome = byId("welcome");
 let picker: PickerApi | null = null;
+
+// Lists the animals recorded closest to the reader. Their location stays in the browser.
+const nearMe = createNearMe(byId("nearby"), {
+  locate: () => locate(),
+  loadSpecies,
+  loadPoints: async (id) => (await loadSightings(id)).points,
+  onLocated: (here) => map.showYouAreHere(here),
+  onShow: (ids) => {
+    if (!picker) {
+      return;
+    }
+    // One animal joins the others on the map, unless there's no colour left for it.
+    if (ids.length !== 1 || !picker.add(ids[0])) {
+      picker.pick(ids);
+    }
+    if (isPhone()) {
+      sheet.set("peek");
+    }
+  },
+});
+byId("near-me").addEventListener("click", () => void nearMe.start());
 const welcomeChoices = [
   ...PRESETS.map((preset) => ({
     text: `${preset.icon} ${preset.label}`,
     pick: (api: PickerApi) => api.pick(preset.ids),
   })),
   { text: "🎲 Surprise me", pick: (api: PickerApi) => api.pickRandom(SURPRISE_COUNT) },
+  // Its results are listed in the drawer, so on phones the drawer opens instead.
+  { text: "📍 Near me", pick: () => void nearMe.start(), drawer: "half" as const },
 ];
 const welcomeButtons = welcomeChoices.map((choice) => {
   const button = document.createElement("button");
@@ -144,7 +168,7 @@ const welcomeButtons = welcomeChoices.map((choice) => {
     }
     // Get the drawer out of the way so the picks can be seen on the map.
     if (isPhone()) {
-      sheet.set("peek");
+      sheet.set("drawer" in choice ? choice.drawer : "peek");
     }
   });
   return button;
