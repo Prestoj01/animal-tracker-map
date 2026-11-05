@@ -37,7 +37,10 @@
         <div id="timeline"></div>
       </fieldset>
       <div class="near-me">
-        <button id="near-me" class="near-me-button" type="button">📍 What lives near me?</button>
+        <div class="explore-buttons">
+          <button id="near-me" class="near-me-button" type="button" title="What lives near me?">📍 Near me</button>
+          <button id="play-game" class="near-me-button" type="button">🎯 Guess the animal</button>
+        </div>
         <section id="nearby" class="nearby" aria-label="Animals recorded near you" hidden></section>
       </div>
       <div id="species-picker" class="species-picker"></div>
@@ -64,6 +67,7 @@
         <p>See where each animal has been spotted, and follow tracked animals on their journeys.</p>
         <div id="welcome-presets" class="welcome-presets"></div>
       </section>
+      <section id="game" class="game panel" aria-label="Guess the animal" hidden></section>
       <p id="map-status" class="map-status panel" role="status">Loading map…</p>
       <aside id="profile" class="profile panel" hidden></aside>
       <ul id="legend" class="legend panel" aria-label="Animals on the map" hidden></ul>

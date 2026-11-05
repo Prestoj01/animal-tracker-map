@@ -1,4 +1,5 @@
 import { createBottomSheet } from "./bottomSheet";
+import { createGame } from "./game";
 import { PRESETS } from "./catalog";
 import { createLazyMap } from "./lazyMap";
 import type { LayerKind } from "./map";
@@ -152,6 +153,31 @@ const nearMe = createNearMe(byId("nearby"), {
   },
 });
 byId("near-me").addEventListener("click", () => void nearMe.start());
+
+// "Guess the animal" clears the map and shows one unnamed animal's sightings.
+const MYSTERY = "mystery";
+let playing = false;
+let selected: string[] = [];
+const game = createGame(byId("game"), {
+  loadSpecies,
+  loadPoints: async (id) => (await loadSightings(id)).points,
+  show: (points) => map.showSightings(MYSTERY, "❓ Mystery animal", "#f0efec", points),
+  hide: () => map.hideSpecies(MYSTERY),
+  onPlayingChange: (isPlaying) => {
+    playing = isPlaying;
+    if (isPlaying) {
+      picker?.pick([]);
+      // Every sighting counts as a clue, whatever period was chosen.
+      timeline.reset();
+      profiles.close();
+      if (isPhone()) {
+        sheet.set("peek");
+      }
+    }
+    welcome.hidden = isPlaying || selected.length > 0;
+  },
+});
+byId("play-game").addEventListener("click", () => game.start());
 const welcomeChoices = [
   ...PRESETS.map((preset) => ({
     text: `${preset.icon} ${preset.label}`,
@@ -160,6 +186,7 @@ const welcomeChoices = [
   { text: "🎲 Surprise me", pick: (api: PickerApi) => api.pickRandom(SURPRISE_COUNT) },
   // Its results are listed in the drawer, so on phones the drawer opens instead.
   { text: "📍 Near me", pick: () => void nearMe.start(), drawer: "half" as const },
+  { text: "🎯 Guess the animal", pick: () => game.start() },
 ];
 const welcomeButtons = welcomeChoices.map((choice) => {
   const button = document.createElement("button");
@@ -185,7 +212,9 @@ const sightingsController = createSightingsController(
   { sightings: loadSightings, tracks: loadTracks },
   { legend: byId("legend"), sources: byId("sources") },
 );
-createTimeline(byId("timeline"), (period) => sightingsController.setPeriod(period));
+const timeline = createTimeline(byId("timeline"), (period) =>
+  sightingsController.setPeriod(period),
+);
 createTrackColouring(trackColouringPanel, (colouring) => map.setTrackColouring(colouring));
 
 void renderSpeciesPicker(
@@ -202,7 +231,12 @@ void renderSpeciesPicker(
       }
     },
     onSelectionChange: (ids) => {
-      welcome.hidden = ids.length > 0;
+      selected = ids;
+      // Picking an animal ends a game, since the map can't show both.
+      if (ids.length > 0) {
+        game.stop();
+      }
+      welcome.hidden = ids.length > 0 || playing;
       shareButton.hidden = ids.length === 0;
       // Replacing, not pushing, so the back button leaves the site as expected.
       window.history.replaceState(null, "", withAnimals(window.location.href, ids));
