@@ -6,6 +6,8 @@
 export interface SiteConfig {
   /** The site's public address, e.g. "https://animal-tracker-map.example.workers.dev". */
   siteUrl: string;
+  /** Cloudflare Web Analytics' site token, or empty for no visitor stats. */
+  analyticsToken?: string;
 }
 
 export interface PageInfo {
@@ -81,6 +83,13 @@ export function parseSiteConfig(data: unknown): SiteConfig {
   if (config.siteUrl && !/^https:\/\/[^/]+/.test(config.siteUrl)) {
     throw new Error("siteUrl in site.config.json must start with https://");
   }
+  if (
+    config.analyticsToken !== undefined &&
+    (typeof config.analyticsToken !== "string" ||
+      (config.analyticsToken !== "" && !/^[0-9a-f]{32}$/.test(config.analyticsToken)))
+  ) {
+    throw new Error("analyticsToken in site.config.json must be empty or a 32-character token");
+  }
   return config as SiteConfig;
 }
 
@@ -101,4 +110,18 @@ export function addPreviewTags(html: string, config: SiteConfig, path: string): 
     "<!-- link-preview -->",
     previewTags(config, { title: unescape(title), description: unescape(description), path }),
   );
+}
+
+/**
+ * Adds Cloudflare Web Analytics, which counts visits without cookies or
+ * tracking people across sites, and is free. Its token is public by design: it
+ * appears in every page. Without a token, pages are left as they are.
+ */
+export function addAnalytics(html: string, config: SiteConfig): string {
+  if (!config.analyticsToken) {
+    return html;
+  }
+  const beacon = JSON.stringify({ token: config.analyticsToken });
+  const tag = `<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='${beacon}'></script>`;
+  return html.replace("</body>", `  ${tag}\n  </body>`);
 }

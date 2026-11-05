@@ -16,6 +16,16 @@ npm run dev
 
 Shared links show a preview card with a title, description and `data/social-preview.jpg`, added to each page at build time by `src/siteHead.ts`. Most apps only show the image when its address is absolute, so set `siteUrl` in `web/site.config.json` to the site's address, such as `https://animal-tracker-map.<your-subdomain>.workers.dev`. Until then the image address is relative.
 
+### Visitor stats
+
+The site can count visits with [Cloudflare Web Analytics](https://developers.cloudflare.com/web-analytics/), which is free, uses no cookies, and doesn't track people across sites. To turn it on:
+
+1. In the Cloudflare dashboard, open **Web Analytics** and choose **Add a site**.
+2. Enter the site's `workers.dev` hostname, and copy the `token` value from the snippet it shows.
+3. Paste it as `analyticsToken` in `web/site.config.json`, then commit and push.
+
+The token is public by design, since it appears in every page. Only built pages include the beacon, so local development isn't counted.
+
 ## Pipeline
 
 Requires Python 3.11.

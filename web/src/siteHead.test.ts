@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import siteConfig from "../site.config.json";
-import { addPreviewTags, parseSiteConfig, previewTags, siteAddress } from "./siteHead";
+import {
+  addAnalytics,
+  addPreviewTags,
+  parseSiteConfig,
+  previewTags,
+  siteAddress,
+} from "./siteHead";
 
 const page = `<head>
     <meta
@@ -75,6 +81,32 @@ describe("parseSiteConfig", () => {
       expect(() => parseSiteConfig(data)).toThrow();
     },
   );
+});
+
+describe("addAnalytics", () => {
+  const token = "0123456789abcdef0123456789abcdef";
+
+  it("adds Cloudflare's beacon before the end of the body", () => {
+    const html = addAnalytics("<body><p>Hi</p></body>", { siteUrl: "", analyticsToken: token });
+    expect(html).toContain(
+      `<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"${token}"}'></script>`,
+    );
+    expect(html.indexOf("beacon")).toBeLessThan(html.indexOf("</body>"));
+  });
+
+  it("leaves pages alone without a token", () => {
+    expect(addAnalytics("<body></body>", { siteUrl: "" })).toBe("<body></body>");
+    expect(addAnalytics("<body></body>", { siteUrl: "", analyticsToken: "" })).toBe(
+      "<body></body>",
+    );
+  });
+
+  it("rejects a token that isn't one", () => {
+    expect(() => parseSiteConfig({ siteUrl: "", analyticsToken: "x' onload='alert(1)" })).toThrow(
+      "analyticsToken",
+    );
+    expect(parseSiteConfig({ siteUrl: "", analyticsToken: token }).analyticsToken).toBe(token);
+  });
 });
 
 describe("site.config.json", () => {
