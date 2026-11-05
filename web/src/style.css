@@ -1322,3 +1322,85 @@ button:disabled {
     animation: none !important;
   }
 }
+
+.about-link {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+}
+
+/* About page */
+
+body.about-page {
+  display: block;
+  height: auto;
+  min-height: 100%;
+}
+
+.about {
+  box-sizing: border-box;
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.about a {
+  color: #86b6ef;
+}
+
+.about h1 {
+  margin: 1.5rem 0 0.75rem;
+  color: var(--text);
+  font-size: 2rem;
+  line-height: 1.2;
+}
+
+.about h2 {
+  margin: 2.5rem 0 0.75rem;
+  color: var(--text);
+  font-size: 1.25rem;
+}
+
+.about h3 {
+  margin: 1.5rem 0 0.5rem;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.about-lead {
+  color: var(--text);
+  font-size: 1.125rem;
+}
+
+.about-sources dt {
+  margin-top: 1rem;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.about-sources dd {
+  margin: 0.25rem 0 0;
+}
+
+.about-limits li + li {
+  margin-top: 0.75rem;
+}
+
+.about-limits strong {
+  color: var(--text);
+}
+
+.about-credits {
+  padding-left: 1.25rem;
+  font-size: 0.875rem;
+}
+
+.about-credits li + li {
+  margin-top: 0.5rem;
+}
+
+.about-credits strong {
+  color: var(--text);
+}

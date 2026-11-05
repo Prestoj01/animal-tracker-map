@@ -1,6 +1,6 @@
 import { defineConfig, type Plugin } from "vitest/config";
-import siteConfig from "./site.config.json";
-import { addAnalytics, addPreviewTags, parseSiteConfig } from "./src/siteHead";
+import siteConfig from "./site.config.json" with { type: "json" };
+import { addAnalytics, addPreviewTags, parseSiteConfig } from "./src/siteHead.ts";
 
 /** Adds link-preview tags and visitor stats to each page, from web/site.config.json. */
 function siteHead(command: "build" | "serve"): Plugin {
@@ -18,6 +18,10 @@ function siteHead(command: "build" | "serve"): Plugin {
 export default defineConfig(({ command }) => ({
   publicDir: "../data",
   plugins: [siteHead(command)],
+  build: {
+    // The map and the About page are separate pages.
+    rollupOptions: { input: ["index.html", "about.html"] },
+  },
   test: {
     environment: "jsdom",
   },

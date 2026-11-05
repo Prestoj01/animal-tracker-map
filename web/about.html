@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#121212" />
+    <meta
+      name="description"
+      content="Where Animal Tracker Map's data comes from, what it can and can't tell you, and who to thank for it."
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>"
+    />
+    <title>About · Animal Tracker Map</title>
+    <!-- link-preview -->
+  </head>
+  <body class="about-page">
+    <main class="about">
+      <p><a href="./">← Back to the map</a></p>
+      <h1><span aria-hidden="true">🐾</span> About Animal Tracker Map</h1>
+      <p class="about-lead">
+        A map of where 24 of the world's best-loved animals have been seen, and the journeys some
+        of them make. It's free, has no ads, and is built entirely from open data.
+      </p>
+
+      <h2>Where the data comes from</h2>
+      <dl class="about-sources">
+        <dt>Sightings</dt>
+        <dd>
+          Records shared through <a href="https://www.gbif.org/">GBIF</a>, the Global Biodiversity
+          Information Facility, by museums, research projects and people using apps like
+          iNaturalist. Refreshed every Monday.
+        </dd>
+        <dt>Migration tracks</dt>
+        <dd>
+          GPS tags fitted by researchers and published on
+          <a href="https://www.movebank.org/">Movebank</a>, used under each study's licence.
+        </dd>
+        <dt>Animal profiles and photos</dt>
+        <dd>
+          Text from <a href="https://www.wikipedia.org/">Wikipedia</a> under
+          <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>, and photos
+          from <a href="https://commons.wikimedia.org/">Wikimedia Commons</a> under their own
+          licences, listed below.
+        </dd>
+        <dt>The map</dt>
+        <dd>
+          Map tiles from <a href="https://openfreemap.org/">OpenFreeMap</a>, built with
+          <a href="https://openmaptiles.org/">OpenMapTiles</a> from
+          <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> data, and drawn with
+          <a href="https://maplibre.org/">MapLibre</a>.
+        </dd>
+      </dl>
+
+      <h2>What the map can and can't tell you</h2>
+      <ul class="about-limits">
+        <li>
+          <strong>Dots show where an animal has been recorded, not how many live there.</strong>
+          Up to about 3,000 records are sampled per animal and spread across its countries, so
+          busy areas look thinner than they are and remote areas with few observers look empty.
+        </li>
+        <li>
+          <strong>Locations are rounded to about 10 km.</strong> That's enough for a world map,
+          and it avoids pointing to the exact places threatened animals live.
+        </li>
+        <li>
+          <strong>Zoo animals are left out</strong>, along with museum specimens and records from
+          countries far outside an animal's range. Some mistakes may remain; for example, herded
+          reindeer in Scandinavia can't be told apart from wild caribou.
+        </li>
+        <li>
+          <strong>Not every animal has tracks.</strong> Tracks appear only where researchers have
+          published tagging data that can be reused, and each journey is simplified to one
+          location per day.
+        </li>
+        <li>
+          <strong>Older records are rarer.</strong> Most sightings are recent, because far more
+          people record wildlife now, so "Before 1990" shows much less than the animal's past
+          range. Records with no year only appear under "All years".
+        </li>
+      </ul>
+
+      <h2>Your privacy</h2>
+      <p>
+        "Near me" asks your browser for your location and works out the nearest animals on your
+        device. Your location is never sent anywhere.
+      </p>
+      <p>
+        The site may count visits with
+        <a href="https://www.cloudflare.com/web-analytics/">Cloudflare Web Analytics</a>, which uses
+        no cookies and doesn't follow you to other sites.
+      </p>
+
+      <h2>Credits</h2>
+      <h3>Sightings</h3>
+      <ul id="credits-gbif" class="about-credits"></ul>
+      <h3>Tracking studies</h3>
+      <ul id="credits-studies" class="about-credits"></ul>
+      <h3>Photos</h3>
+      <ul id="credits-photos" class="about-credits"></ul>
+
+      <h2>Source code</h2>
+      <p>
+        The site and the scripts that build its data are open source on
+        <a href="https://github.com/Prestoj01/animal-tracker-map">GitHub</a>.
+      </p>
+    </main>
+    <script type="module" src="/src/about.ts"></script>
+  </body>
+</html>
