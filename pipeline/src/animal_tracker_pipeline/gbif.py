@@ -65,12 +65,14 @@ class JsonClient:
                 if error.code != 429 and error.code < 500:
                     raise GbifError(f"HTTP {error.code} for {url}") from error
                 failure: Exception = error
-            # Dropped connections and cut-off responses are worth another try.
+            # Dropped connections and cut-off responses are worth another try. A
+            # body cut off without an error arrives as JSON that doesn't parse.
             except (
                 urllib.error.URLError,
                 TimeoutError,
                 ConnectionError,
                 http.client.HTTPException,
+                json.JSONDecodeError,
             ) as error:
                 failure = error
             if attempt < RETRIES:

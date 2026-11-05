@@ -54,6 +54,20 @@ def test_retries_transient_failures(failure):
     assert len(requests) == 2
 
 
+def test_retries_a_response_cut_off_partway():
+    bodies = [b'{"results": [{"year"', b'{"ok": true}']
+    requests = []
+
+    def opener(request, timeout):
+        requests.append(request)
+        return io.BytesIO(bodies.pop(0))
+
+    client = GbifClient(opener=opener, sleep=lambda _: None)
+
+    assert client.get("path", {}) == {"ok": True}
+    assert len(requests) == 2
+
+
 def test_does_not_retry_client_errors():
     client, requests = client_returning(http_error(404))
 
