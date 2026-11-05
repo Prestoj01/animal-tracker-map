@@ -1,3 +1,4 @@
+import datetime
 import gzip
 import json
 
@@ -5,6 +6,7 @@ import pytest
 
 from animal_tracker_pipeline.gbif import GbifError, RequestBudgetExceeded
 from animal_tracker_pipeline.sightings import (
+    HISTORY_PERIODS,
     MAX_PER_COUNTRY,
     MIN_PER_COUNTRY,
     OUTPUT_DIR,
@@ -20,9 +22,10 @@ WOLF = Species("grey-wolf", "Grey wolf", "Canis lupus")
 
 
 class FakeClient:
-    def __init__(self, facets, results=None, match=None):
+    def __init__(self, facets, results=None, match=None, history=None):
         self.facets = facets
         self.results = results or {}
+        self.history = history or {}
         self.match = match or {"matchType": "EXACT", "usageKey": 42}
         self.calls = []
 
@@ -41,11 +44,18 @@ class FakeClient:
                     }
                 ]
             }
+        if "year" in params:
+            return {"results": self.history.get(params["year"], [])}
         return {"results": self.results.get(params["country"], [])}
 
 
-def record(longitude, latitude):
-    return {"decimalLongitude": longitude, "decimalLatitude": latitude}
+def record(longitude, latitude, year=2020, country="KE"):
+    return {
+        "decimalLongitude": longitude,
+        "decimalLatitude": latitude,
+        "year": year,
+        "countryCode": country,
+    }
 
 
 def test_rounds_and_deduplicates_points():
@@ -59,8 +69,51 @@ def test_rounds_and_deduplicates_points():
     assert sightings == {
         "speciesId": "lion",
         "totalRecords": 2,
-        "points": [(1.0, 2.0), (36.8, -1.3)],
+        "points": [(1.0, 2.0, 2020), (36.8, -1.3, 2020)],
     }
+
+
+def test_keeps_one_point_per_place_and_year():
+    client = FakeClient(
+        {"KE": 4},
+        {
+            "KE": [
+                record(36.8, -1.3, 2001),
+                record(36.8, -1.3, 2001),
+                record(36.8, -1.3, 2015),
+                record(36.8, -1.3, None),
+            ]
+        },
+    )
+
+    assert fetch_sightings(client, LION)["points"] == [
+        (36.8, -1.3, None),
+        (36.8, -1.3, 2001),
+        (36.8, -1.3, 2015),
+    ]
+
+
+def test_samples_each_older_period_outside_excluded_countries():
+    client = FakeClient(
+        {"KE": 1},
+        {"KE": [record(36.8, -1.3, 2024)]},
+        history={
+            "1700,1989": [record(30.0, 0.0, 1975), record(-83.1, 40.2, 1980, "US")],
+            "1990,1999": [record(31.0, 0.0, 1995)],
+        },
+    )
+
+    sightings = fetch_sightings(client, LION)
+
+    assert sightings["points"] == [
+        (30.0, 0.0, 1975),
+        (31.0, 0.0, 1995),
+        (36.8, -1.3, 2024),
+    ]
+    periods = [params["year"] for _, params in client.calls if "year" in params]
+    assert periods == HISTORY_PERIODS
+    # Counts come from the country facets alone, as before.
+    assert sightings["totalRecords"] == 1
 
 
 def test_skips_records_without_coordinates():
@@ -77,7 +130,7 @@ def test_excludes_countries_outside_the_range():
 
     sightings = fetch_sightings(client, LION)
 
-    assert sightings["points"] == [(36.8, -1.3)]
+    assert sightings["points"] == [(36.8, -1.3, 2020)]
     assert sightings["totalRecords"] == 5
     assert all(params.get("country") != "US" for _, params in client.calls)
 
@@ -154,6 +207,8 @@ def test_every_species_has_a_valid_committed_file():
         )
         assert data["speciesId"] == species.id
         assert data["points"], species.id
-        for longitude, latitude in data["points"]:
+        for longitude, latitude, year in data["points"]:
             assert -180 <= longitude <= 180
             assert -90 <= latitude <= 90
+            # Old records exist, such as a 1629 one, but none from the future.
+            assert year is None or 1500 <= year <= datetime.date.today().year

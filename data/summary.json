@@ -1,42 +1,42 @@
 {
   "lion": {
-    "sightings": 1069,
+    "sightings": 1353,
     "tracks": 0
   },
   "tiger": {
-    "sightings": 341,
+    "sightings": 413,
     "tracks": 0
   },
   "cheetah": {
-    "sightings": 662,
+    "sightings": 853,
     "tracks": 0
   },
   "puma": {
-    "sightings": 1262,
+    "sightings": 1546,
     "tracks": 0
   },
   "african-bush-elephant": {
-    "sightings": 1042,
+    "sightings": 1359,
     "tracks": 0
   },
   "african-forest-elephant": {
-    "sightings": 338,
+    "sightings": 349,
     "tracks": 0
   },
   "giraffe": {
-    "sightings": 253,
+    "sightings": 359,
     "tracks": 0
   },
   "white-rhino": {
-    "sightings": 496,
+    "sightings": 691,
     "tracks": 0
   },
   "western-gorilla": {
-    "sightings": 147,
+    "sightings": 157,
     "tracks": 0
   },
   "eastern-gorilla": {
-    "sightings": 66,
+    "sightings": 75,
     "tracks": 0
   },
   "giant-panda": {
@@ -44,55 +44,55 @@
     "tracks": 0
   },
   "polar-bear": {
-    "sightings": 752,
+    "sightings": 1283,
     "tracks": 0
   },
   "brown-bear": {
-    "sightings": 1452,
+    "sightings": 1981,
     "tracks": 0
   },
   "grey-wolf": {
-    "sightings": 1274,
+    "sightings": 1680,
     "tracks": 0
   },
   "wildebeest": {
-    "sightings": 497,
+    "sightings": 694,
     "tracks": 0
   },
   "caribou": {
-    "sightings": 710,
+    "sightings": 1028,
     "tracks": 0
   },
   "humpback-whale": {
-    "sightings": 1082,
+    "sightings": 1626,
     "tracks": 0
   },
   "blue-whale": {
-    "sightings": 1120,
+    "sightings": 1479,
     "tracks": 0
   },
   "whale-shark": {
-    "sightings": 977,
+    "sightings": 1129,
     "tracks": 0
   },
   "great-white-shark": {
-    "sightings": 582,
+    "sightings": 674,
     "tracks": 0
   },
   "green-sea-turtle": {
-    "sightings": 1513,
+    "sightings": 1922,
     "tracks": 0
   },
   "emperor-penguin": {
-    "sightings": 200,
+    "sightings": 729,
     "tracks": 0
   },
   "bald-eagle": {
-    "sightings": 422,
+    "sightings": 1135,
     "tracks": 4
   },
   "snowy-owl": {
-    "sightings": 560,
+    "sightings": 993,
     "tracks": 0
   }
 }

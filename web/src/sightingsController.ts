@@ -1,8 +1,9 @@
 import { speciesIcon } from "./catalog";
 import type { SightingsMap } from "./map";
-import type { Sightings } from "./sightings";
+import { countPlaces, pointYear, type SightingPoint, type Sightings } from "./sightings";
 import type { Species } from "./species";
 import type { PickerHandlers, RowStatus } from "./speciesPicker";
+import { ALL_YEARS, inPeriod, periodPhrase, type Period } from "./timeline";
 import { licenceName, type Tracks } from "./tracks";
 
 export interface Loaders {
@@ -36,6 +37,25 @@ function cached<T>(load: (id: string) => Promise<T>): (id: string) => Promise<T>
   };
 }
 
+/** A card's sightings text for a period, e.g. "1,234 places" or "none in the 1990s". */
+export function sightingsText(points: SightingPoint[], period: Period): string {
+  if (points.length === 0) {
+    return "no sightings";
+  }
+  const places = countPlaces(points.filter((point) => inPeriod(pointYear(point), period)));
+  const phrase = periodPhrase(period);
+  if (places === 0) {
+    return `none ${phrase}`;
+  }
+  const count = `${places.toLocaleString("en")} ${places === 1 ? "place" : "places"}`;
+  return phrase ? `${count} ${phrase}` : count;
+}
+
+export interface SightingsController extends PickerHandlers {
+  /** Shows only sightings from this period, and updates each card's count. */
+  setPeriod(period: Period): void;
+}
+
 /** How the map names an animal on hover, e.g. "🦁 Lion". */
 function label(species: Species): string {
   return `${speciesIcon(species.id)} ${species.commonName}`;
@@ -61,7 +81,7 @@ export function createSightingsController(
   map: SightingsMap,
   loaders: Loaders,
   { legend, sources }: Panels,
-): PickerHandlers {
+): SightingsController {
   const loadSightings = cached(loaders.sightings);
   const loadTracks = cached(loaders.tracks);
   // Checked against on arrival, so a slow response can't revive a deselected species.
@@ -70,6 +90,9 @@ export function createSightingsController(
   const sourceEntries = new Map<string, HTMLElement>();
   // Each species' latest part states, so a retry keeps the parts that loaded.
   const previous = new Map<string, Map<Part, PartState>>();
+  let period = ALL_YEARS;
+  // Redraws each loaded card's text, so a new period can recount its sightings.
+  const recount = new Map<string, () => void>();
 
   const renderPanels = () => {
     legend.replaceChildren(...legendEntries.values());
@@ -152,9 +175,10 @@ export function createSightingsController(
           map.showSightings(species.id, label(species), color, points);
           addLegend(species, color);
         }
-        states.set("sightings", {
-          kind: "done",
-          text: points.length ? `${points.length.toLocaleString()} places` : "no sightings",
+        states.set("sightings", { kind: "done", text: sightingsText(points, period) });
+        recount.set(species.id, () => {
+          states.set("sightings", { kind: "done", text: sightingsText(points, period) });
+          render();
         });
       });
     }
@@ -182,8 +206,14 @@ export function createSightingsController(
     onSelect(species, color, status) {
       select(species, color, status, ["sightings", "tracks"]);
     },
+    setPeriod(next) {
+      period = next;
+      map.setPeriod(next);
+      recount.forEach((update) => update());
+    },
     onDeselect(species) {
       active.delete(species.id);
+      recount.delete(species.id);
       previous.delete(species.id);
       map.hideSpecies(species.id);
       legendEntries.delete(species.id);

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMap } from "./map";
+import { ALL_YEARS, PERIODS } from "./timeline";
 import type { Track, TrackPoint } from "./tracks";
 
 type Handler = (event: { error?: Error }) => void;
@@ -11,6 +12,7 @@ interface FakeLayer {
   id: string;
   paint: Record<string, unknown>;
   layout: { visibility: string };
+  filter?: unknown;
 }
 
 const mock = vi.hoisted(() => ({
@@ -86,6 +88,12 @@ vi.mock("maplibre-gl", () => ({
     easeTo({ center }: { center: { lng: number } }) {
       mock.center = center.lng;
       mock.eases += 1;
+    }
+    setFilter(id: string, filter: unknown) {
+      const layer = mock.layers.get(id);
+      if (layer) {
+        layer.filter = filter;
+      }
     }
     getPaintProperty(id: string, name: string) {
       return mock.layers.get(id)?.paint[name];
@@ -449,5 +457,33 @@ describe("createMap", () => {
     // Switching animals' layers off leaves the marker.
     map.setKindVisible("sightings", false);
     expect(mock.layers.get("you-are-here")?.layout).toBeUndefined();
+  });
+
+  it("tags sightings with their year and filters them by period", () => {
+    const map = loadedMap();
+    map.showSightings("lion", "Lion", "#f00", [[1, 2, 1995], [3, 4, null], [5, 6]]);
+    expect(
+      mock.sources.get("sightings-lion")?.data.features.map((feature) => feature.properties),
+    ).toEqual([{ year: 1995 }, {}, {}]);
+    expect(mock.layers.get("sightings-lion")?.filter).toBeUndefined();
+
+    const nineties = PERIODS.find((period) => period.label === "1990s")!;
+    map.setPeriod(nineties);
+    const filter = [
+      "all",
+      ["has", "year"],
+      [">=", ["get", "year"], 1990],
+      ["<=", ["get", "year"], 1999],
+    ];
+    expect(mock.layers.get("sightings-lion")?.filter).toEqual(filter);
+
+    // Animals added later get the same filter; tracks never do.
+    map.showSightings("tiger", "Tiger", "#0f0", [[7, 8, 2001]]);
+    map.showTracks("tiger", "Tiger", "#0f0", [line([1, 2], [3, 4])]);
+    expect(mock.layers.get("sightings-tiger")?.filter).toEqual(filter);
+    expect(mock.layers.get("tracks-tiger")?.filter).toBeUndefined();
+
+    map.setPeriod(ALL_YEARS);
+    expect(mock.layers.get("sightings-lion")?.filter).toBeNull();
   });
 });

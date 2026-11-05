@@ -26,6 +26,12 @@ MAX_COUNTRIES = 60
 # precise locations of threatened animals.
 COORDINATE_DECIMALS = 1
 
+# GBIF returns its newest records first, so the country sample above is mostly
+# recent. Each older period gets its own sample so the site's time slider has
+# something to show. Matches the periods in web/src/timeline.ts.
+HISTORY_PERIODS = ["1700,1989", "1990,1999", "2000,2009", "2010,2019"]
+PER_PERIOD = 300  # GBIF's page size limit
+
 BASE_FILTERS = {
     "hasCoordinate": "true",
     "hasGeospatialIssue": "false",
@@ -98,6 +104,42 @@ def records_per_country(counts: dict[str, int], total: int) -> dict[str, int]:
     }
 
 
+def to_points(
+    records: list[dict[str, Any]], excluded: set[str]
+) -> set[tuple[float, float, int | None]]:
+    """Rounded places with their year, leaving out records from excluded countries."""
+    points = set()
+    for record in records:
+        longitude = record.get("decimalLongitude")
+        latitude = record.get("decimalLatitude")
+        if longitude is None or latitude is None:
+            continue
+        if record.get("countryCode") in excluded:
+            continue
+        year = record.get("year")
+        points.add(
+            (
+                round(longitude, COORDINATE_DECIMALS),
+                round(latitude, COORDINATE_DECIMALS),
+                year if isinstance(year, int) else None,
+            )
+        )
+    return points
+
+
+def history_points(
+    client: GbifClient, filters: dict[str, Any], excluded: set[str]
+) -> set[tuple[float, float, int | None]]:
+    """A sample from each older period, which the country sample barely reaches."""
+    points = set()
+    for years in HISTORY_PERIODS:
+        results = client.get(
+            "occurrence/search", {**filters, "year": years, "limit": PER_PERIOD}
+        )["results"]
+        points.update(to_points(results, excluded))
+    return points
+
+
 def fetch_sightings(client: GbifClient, species: Species) -> dict[str, Any]:
     filters = {**BASE_FILTERS, **taxon_filter(client, species)}
     facets = client.get(
@@ -113,25 +155,19 @@ def fetch_sightings(client: GbifClient, species: Species) -> dict[str, Any]:
     }
     total = sum(counts.values())
 
-    points: set[tuple[float, float]] = set()
+    # The year is kept so the site can show how sightings change over time. A
+    # place seen in several years appears once per year.
+    points: set[tuple[float, float, int | None]] = set()
     for country, limit in records_per_country(counts, total).items():
         results = client.get(
             "occurrence/search", {**filters, "country": country, "limit": limit}
         )["results"]
-        for record in results:
-            longitude = record.get("decimalLongitude")
-            latitude = record.get("decimalLatitude")
-            if longitude is not None and latitude is not None:
-                points.add(
-                    (
-                        round(longitude, COORDINATE_DECIMALS),
-                        round(latitude, COORDINATE_DECIMALS),
-                    )
-                )
+        points.update(to_points(results, excluded))
+    points.update(history_points(client, filters, excluded))
     return {
         "speciesId": species.id,
         "totalRecords": total,
-        "points": sorted(points),
+        "points": sorted(points, key=lambda point: (point[0], point[1], point[2] or 0)),
     }
 
 

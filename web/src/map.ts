@@ -3,13 +3,16 @@ import {
   NavigationControl,
   Popup,
   setWorkerUrl,
+  type ExpressionSpecification,
+  type FilterSpecification,
   type GeoJSONSource,
   type LayerSpecification,
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 // MapLibre ships its worker as a separate file, which the bundler only emits if imported.
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
-import type { Point } from "./sightings";
+import { pointYear, type Point, type SightingPoint } from "./sightings";
+import { ALL_YEARS, type Period } from "./timeline";
 import { splitAtAntimeridian, trackLabel, trackSoFar, type Track } from "./tracks";
 
 setWorkerUrl(workerUrl);
@@ -34,7 +37,9 @@ const FAILED_MESSAGE = "The map could not be loaded. Check your connection and r
 export type LayerKind = "sightings" | "tracks";
 
 export interface SightingsMap {
-  showSightings(id: string, name: string, color: string, points: Point[]): void;
+  showSightings(id: string, name: string, color: string, points: SightingPoint[]): void;
+  /** Shows only sightings from this period, including animals added later. */
+  setPeriod(period: Period): void;
   showTracks(id: string, name: string, color: string, tracks: Track[]): void;
   /** Removes both kinds of layer for a species. */
   hideSpecies(id: string): void;
@@ -86,6 +91,7 @@ export function createMap(
       showTracks() {},
       hideSpecies() {},
       showYouAreHere() {},
+      setPeriod() {},
       setKindVisible() {},
       playTracks: ({ onEnd }) => {
         onEnd();
@@ -192,6 +198,20 @@ export function createMap(
     fitTimer = setTimeout(fit, FIT_DELAY_MS);
   };
   const visible: Record<LayerKind, boolean> = { sightings: true, tracks: true };
+  let period = ALL_YEARS;
+  // Sightings are tagged with their year when known, so a period keeps only those in it.
+  const periodFilter = (): FilterSpecification | null => {
+    if (period === ALL_YEARS) {
+      return null;
+    }
+    const year: ExpressionSpecification = ["get", "year"];
+    return [
+      "all",
+      ["has", "year"],
+      ...(period.from === null ? [] : [[">=", year, period.from] as ExpressionSpecification]),
+      ...(period.to === null ? [] : [["<=", year, period.to] as ExpressionSpecification]),
+    ] as FilterSpecification;
+  };
   const layers = new Set<string>();
   // Layers added before the map loads wait here, and can be cancelled by a hide.
   const pending = new Map<string, () => void>();
@@ -216,6 +236,7 @@ export function createMap(
         source: layer,
         paint,
         layout: { visibility: visible[kind] ? "visible" : "none" },
+        ...(kind === "sightings" && periodFilter() ? { filter: periodFilter() } : {}),
       } as LayerSpecification,
       kind === "tracks" ? firstSightings : you,
     );
@@ -339,14 +360,15 @@ export function createMap(
 
   return {
     showSightings(id, name, color, points) {
-      extend(id, points);
-      const features = points.map(
-        (coordinates): GeoJSON.Feature => ({
+      extend(id, points.map(([longitude, latitude]): Point => [longitude, latitude]));
+      const features = points.map((point): GeoJSON.Feature => {
+        const year = pointYear(point);
+        return {
           type: "Feature",
-          properties: {},
-          geometry: { type: "Point", coordinates },
-        }),
-      );
+          properties: year === null ? {} : { year },
+          geometry: { type: "Point", coordinates: [point[0], point[1]] },
+        };
+      });
       whenReady(layerId("sightings", id), () =>
         add("sightings", id, name, features, {
           "circle-color": color,
@@ -448,6 +470,16 @@ export function createMap(
       };
       step();
       return finish;
+    },
+    setPeriod(next) {
+      period = next;
+      whenReady("period", () => {
+        for (const layer of layers) {
+          if (layer.startsWith("sightings-")) {
+            map.setFilter(layer, periodFilter());
+          }
+        }
+      });
     },
     setKindVisible(kind, isVisible) {
       visible[kind] = isVisible;

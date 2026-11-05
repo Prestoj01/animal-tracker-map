@@ -11,6 +11,7 @@ import { loadSpecies } from "./species";
 import { copyText, readAnimals, withAnimals } from "./shareLink";
 import { renderSpeciesPicker, SURPRISE_COUNT, type PickerApi } from "./speciesPicker";
 import { loadSummary } from "./summary";
+import { createTimeline } from "./timeline";
 import { loadTracks } from "./tracks";
 import "./style.css";
 
@@ -175,14 +176,17 @@ const welcomeButtons = welcomeChoices.map((choice) => {
 });
 byId("welcome-presets").append(...welcomeButtons);
 
+const sightingsController = createSightingsController(
+  map,
+  { sightings: loadSightings, tracks: loadTracks },
+  { legend: byId("legend"), sources: byId("sources") },
+);
+createTimeline(byId("timeline"), (period) => sightingsController.setPeriod(period));
+
 void renderSpeciesPicker(
   byId("species-picker"),
   loadSpecies,
-  createSightingsController(
-    map,
-    { sightings: loadSightings, tracks: loadTracks },
-    { legend: byId("legend"), sources: byId("sources") },
-  ),
+  sightingsController,
   {
     loadSummary: summary,
     onShowProfile: (species) => {

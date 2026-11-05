@@ -8,6 +8,7 @@ import {
   nearestSightings,
   type NearMeOptions,
 } from "./nearMe";
+import type { SightingPoint } from "./sightings";
 import type { Species } from "./species";
 
 const lion: Species = { id: "lion", commonName: "Lion", scientificName: "Panthera leo" };
@@ -30,7 +31,7 @@ afterEach(() => {
 });
 
 function options(overrides: Partial<NearMeOptions> = {}): NearMeOptions {
-  const points: Record<string, number[][]> = {
+  const points: Record<string, SightingPoint[]> = {
     lion: [[36.9, -1.4], [20, 0]],
     tiger: [DELHI],
     "giant-panda": [],
@@ -155,7 +156,7 @@ describe("createNearMe", () => {
           if (id === "tiger") {
             throw new Error("offline");
           }
-          return [[36.9, -1.4]];
+          return [[36.9, -1.4]] as SightingPoint[];
         },
       }),
     ).start();

@@ -1,5 +1,5 @@
 import { speciesIcon } from "./catalog";
-import type { Point } from "./sightings";
+import type { Point, SightingPoint } from "./sightings";
 import type { Species } from "./species";
 
 const EARTH_RADIUS_KM = 6371;
@@ -7,8 +7,11 @@ const LOCATE_TIMEOUT_MS = 15000;
 /** How many of the nearest animals are listed. */
 export const NEARBY_COUNT = 5;
 
-/** Great-circle distance between two [longitude, latitude] points. */
-export function distanceKm([lon1, lat1]: Point, [lon2, lat2]: Point): number {
+/** Great-circle distance between two points; anything after longitude and latitude is ignored. */
+export function distanceKm(
+  [lon1, lat1]: readonly [number, number, ...unknown[]],
+  [lon2, lat2]: readonly [number, number, ...unknown[]],
+): number {
   const radians = (degrees: number) => (degrees * Math.PI) / 180;
   const dLat = radians(lat2 - lat1);
   const dLon = radians(lon2 - lon1);
@@ -26,13 +29,13 @@ export interface Nearby {
 /** Each species' closest recorded place to `here`, nearest first. */
 export function nearestSightings(
   here: Point,
-  sightings: { species: Species; points: readonly (readonly number[])[] }[],
+  sightings: { species: Species; points: readonly SightingPoint[] }[],
 ): Nearby[] {
   return sightings
     .filter(({ points }) => points.length > 0)
     .map(({ species, points }) => ({
       species,
-      km: Math.min(...points.map(([lon, lat]) => distanceKm(here, [lon, lat]))),
+      km: Math.min(...points.map((point) => distanceKm(here, point))),
     }))
     .sort((a, b) => a.km - b.km);
 }
@@ -73,7 +76,7 @@ export function locate(geolocation: Geolocation | undefined = navigator.geolocat
 export interface NearMeOptions {
   locate: () => Promise<Point>;
   loadSpecies: () => Promise<Species[]>;
-  loadPoints: (speciesId: string) => Promise<readonly (readonly number[])[]>;
+  loadPoints: (speciesId: string) => Promise<readonly SightingPoint[]>;
   /** Called with the reader's location once found, to mark it on the map. */
   onLocated: (here: Point) => void;
   /** Puts these animals on the map. */

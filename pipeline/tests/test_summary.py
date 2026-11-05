@@ -10,7 +10,7 @@ TIGER = Species("tiger", "Tiger", "Panthera tigris")
 
 def test_counts_points_and_tracked_animals(tmp_path):
     write_json_gz(
-        {"speciesId": "lion", "points": [[1, 2], [3, 4]]},
+        {"speciesId": "lion", "points": [[1, 2, 2001], [1, 2, 2002], [3, 4, None]]},
         tmp_path / "sightings" / "lion.json.gz",
     )
     write_json_gz(

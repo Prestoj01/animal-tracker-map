@@ -28,7 +28,12 @@ def build_summary(species: list[Species], data_dir: Path) -> dict[str, dict[str,
         sightings = _read(data_dir / "sightings" / f"{entry.id}.json.gz")
         tracks = _read(data_dir / "tracks" / f"{entry.id}.json.gz")
         summary[entry.id] = {
-            "sightings": len(sightings["points"]) if sightings else 0,
+            # Unique places: a place seen in several years is one point per year.
+            "sightings": (
+                len({(point[0], point[1]) for point in sightings["points"]})
+                if sightings
+                else 0
+            ),
             "tracks": len(tracks["tracks"]) if tracks else 0,
         }
     return summary

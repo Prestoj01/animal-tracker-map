@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Sightings } from "./sightings";
-import { createSightingsController } from "./sightingsController";
+import { createSightingsController, sightingsText } from "./sightingsController";
+import { ALL_YEARS, PERIODS } from "./timeline";
 import type { Tracks } from "./tracks";
 
 const lion = { id: "lion", commonName: "Lion", scientificName: "Panthera leo" };
@@ -36,6 +37,7 @@ const map = {
   hideSpecies: vi.fn(),
   setKindVisible: vi.fn(),
   showYouAreHere: vi.fn(),
+  setPeriod: vi.fn(),
   playTracks: vi.fn(),
 };
 const status = { set: vi.fn() };
@@ -83,7 +85,7 @@ describe("createSightingsController", () => {
     await flush();
     expect(map.showSightings).toHaveBeenCalledWith("lion", "🦁 Lion", "#123456", [[1, 2]]);
     expect(map.showTracks).toHaveBeenCalledWith("lion", "🦁 Lion", "#123456", tracks.tracks);
-    expect(status.set).toHaveBeenLastCalledWith("1 places · 1 tracked", undefined);
+    expect(status.set).toHaveBeenLastCalledWith("1 place · 1 tracked", undefined);
     expect(legend.textContent).toBe("Lion");
     expect(sources.textContent).toContain("Someone 2020 (CC BY, 2010–2012)");
     expect(sources.querySelector("a")?.href).toBe(study.url);
@@ -117,14 +119,14 @@ describe("createSightingsController", () => {
     handlers.onSelect(lion, "#123456", status);
     await flush();
     const [text, retry] = status.set.mock.lastCall as [string, () => void];
-    expect(text).toBe("1 places · tracks failed");
+    expect(text).toBe("1 place · tracks failed");
     expect(map.showSightings).toHaveBeenCalled();
 
     retry();
     await flush();
     expect(loadTracks).toHaveBeenCalledTimes(2);
     expect(loadSightings).toHaveBeenCalledTimes(1);
-    expect(status.set).toHaveBeenLastCalledWith("1 places · 1 tracked", undefined);
+    expect(status.set).toHaveBeenLastCalledWith("1 place · 1 tracked", undefined);
   });
 
   it("ignores responses that arrive after deselecting", async () => {
@@ -156,5 +158,41 @@ describe("createSightingsController", () => {
     await flush();
     expect(loadSightings).toHaveBeenCalledTimes(1);
     expect(map.showSightings).toHaveBeenLastCalledWith("lion", "🦁 Lion", "#abcdef", [[1, 2]]);
+  });
+
+  it("recounts each card's sightings when the period changes", async () => {
+    const handlers = controller(async () => ({
+      ...sightings,
+      points: [[1, 2, 1995], [1, 2, 1996], [3, 4, 2015]],
+    }));
+    handlers.onSelect(lion, "#123456", status);
+    await flush();
+    expect(status.set).toHaveBeenLastCalledWith("2 places · 1 tracked", undefined);
+
+    const nineties = PERIODS.find((period) => period.label === "1990s")!;
+    handlers.setPeriod(nineties);
+    expect(map.setPeriod).toHaveBeenCalledWith(nineties);
+    expect(status.set).toHaveBeenLastCalledWith("1 place in the 1990s · 1 tracked", undefined);
+
+    // A deselected animal is left alone.
+    handlers.onDeselect(lion);
+    status.set.mockReset();
+    handlers.setPeriod(ALL_YEARS);
+    expect(status.set).not.toHaveBeenCalled();
+  });
+});
+
+describe("sightingsText", () => {
+  it("counts places in the period, with empty states", () => {
+    const twenties = PERIODS.find((period) => period.label === "2020s")!;
+    expect(sightingsText([], ALL_YEARS)).toBe("no sightings");
+    expect(sightingsText([[1, 2, 1990], [3, 4]], ALL_YEARS)).toBe("2 places");
+    expect(sightingsText([[1, 2, 1990], [3, 4]], twenties)).toBe("none in the 2020s");
+    const many = Array.from({ length: 1500 }, (_, index): [number, number, number] => [
+      index,
+      0,
+      2021,
+    ]);
+    expect(sightingsText(many, twenties)).toBe("1,500 places in the 2020s");
   });
 });

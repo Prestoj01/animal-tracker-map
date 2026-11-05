@@ -9,6 +9,7 @@ function fakeMap() {
     hideSpecies: vi.fn(),
     setKindVisible: vi.fn(),
     showYouAreHere: vi.fn(),
+    setPeriod: vi.fn(),
     playTracks: vi.fn(() => () => {}),
   };
 }
