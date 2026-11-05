@@ -1,4 +1,5 @@
 import { createBottomSheet } from "./bottomSheet";
+import { createComparePanel, type Picked } from "./compare";
 import { createGame } from "./game";
 import { PRESETS } from "./catalog";
 import { createLazyMap } from "./lazyMap";
@@ -7,7 +8,7 @@ import { createNearMe, locate } from "./nearMe";
 import { createProfilePanel } from "./profilePanel";
 import { loadProfiles } from "./profiles";
 import { loadSightings } from "./sightings";
-import { createSightingsController } from "./sightingsController";
+import { cached, createSightingsController } from "./sightingsController";
 import { loadSpecies } from "./species";
 import { copyText, readAnimals, withAnimals } from "./shareLink";
 import { renderSpeciesPicker, SURPRISE_COUNT, type PickerApi } from "./speciesPicker";
@@ -137,7 +138,7 @@ let picker: PickerApi | null = null;
 const nearMe = createNearMe(byId("nearby"), {
   locate: () => locate(),
   loadSpecies,
-  loadPoints: async (id) => (await loadSightings(id)).points,
+  loadPoints: async (id) => (await loaders.sightings(id)).points,
   onLocated: (here) => map.showYouAreHere(here),
   onShow: (ids) => {
     if (!picker) {
@@ -160,7 +161,7 @@ let playing = false;
 let selected: string[] = [];
 const game = createGame(byId("game"), {
   loadSpecies,
-  loadPoints: async (id) => (await loadSightings(id)).points,
+  loadPoints: async (id) => (await loaders.sightings(id)).points,
   show: (points) => map.showSightings(MYSTERY, "❓ Mystery animal", "#f0efec", points),
   hide: () => map.hideSpecies(MYSTERY),
   onPlayingChange: (isPlaying) => {
@@ -207,11 +208,35 @@ const welcomeButtons = welcomeChoices.map((choice) => {
 });
 byId("welcome-presets").append(...welcomeButtons);
 
-const sightingsController = createSightingsController(
-  map,
-  { sightings: loadSightings, tracks: loadTracks },
-  { legend: byId("legend"), sources: byId("sources") },
-);
+// Shared by the map, Compare and the game, so each animal's data loads once.
+const loaders = { sightings: cached(loadSightings), tracks: cached(loadTracks) };
+const sightingsController = createSightingsController(map, loaders, {
+  legend: byId("legend"),
+  sources: byId("sources"),
+});
+
+// Compare needs each picked animal's colour, which the picker hands to the map.
+const pickedInfo = new Map<string, Picked>();
+const pickerHandlers = {
+  ...sightingsController,
+  onSelect: (...args: Parameters<typeof sightingsController.onSelect>) => {
+    const [species, color] = args;
+    pickedInfo.set(species.id, { species, color });
+    sightingsController.onSelect(...args);
+  },
+  onDeselect: (...args: Parameters<typeof sightingsController.onDeselect>) => {
+    pickedInfo.delete(args[0].id);
+    sightingsController.onDeselect(...args);
+  },
+};
+const compareButton = byId("compare");
+const compare = createComparePanel(byId("compare-panel"), loaders, () => profiles.close());
+compareButton.addEventListener("click", () => {
+  compare.open();
+  if (isPhone()) {
+    sheet.set("peek");
+  }
+});
 const timeline = createTimeline(byId("timeline"), (period) =>
   sightingsController.setPeriod(period),
 );
@@ -220,10 +245,11 @@ createTrackColouring(trackColouringPanel, (colouring) => map.setTrackColouring(c
 void renderSpeciesPicker(
   byId("species-picker"),
   loadSpecies,
-  sightingsController,
+  pickerHandlers,
   {
     loadSummary: summary,
     onShowProfile: (species) => {
+      compare.close();
       profiles.open(species);
       // On phones the drawer would cover the profile.
       if (isPhone()) {
@@ -238,6 +264,8 @@ void renderSpeciesPicker(
       }
       welcome.hidden = ids.length > 0 || playing;
       shareButton.hidden = ids.length === 0;
+      compareButton.hidden = ids.length < 2;
+      compare.update(ids.flatMap((id) => pickedInfo.get(id) ?? []));
       // Replacing, not pushing, so the back button leaves the site as expected.
       window.history.replaceState(null, "", withAnimals(window.location.href, ids));
     },

@@ -23,7 +23,8 @@ type PartState =
   | { kind: "done"; text: string }
   | { kind: "failed" };
 
-function cached<T>(load: (id: string) => Promise<T>): (id: string) => Promise<T> {
+/** Loads each id once, forgetting failures so they can be tried again. */
+export function cached<T>(load: (id: string) => Promise<T>): (id: string) => Promise<T> {
   const cache = new Map<string, Promise<T>>();
   return (id) => {
     let request = cache.get(id);

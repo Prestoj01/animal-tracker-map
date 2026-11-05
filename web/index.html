@@ -61,7 +61,12 @@
         <span aria-hidden="true">‹</span>
         <span class="visually-hidden">Hide the animal list</span>
       </button>
-      <button id="share" class="share-button panel" type="button" hidden>🔗 Share</button>
+      <div class="map-actions">
+        <button id="share" class="share-button panel" type="button" hidden>🔗 Share</button>
+        <button id="compare" class="share-button panel" type="button" aria-controls="compare-panel" hidden>
+          ⚖️ Compare
+        </button>
+      </div>
       <section id="welcome" class="welcome panel" aria-labelledby="welcome-title">
         <h2 id="welcome-title">Pick an animal to start exploring</h2>
         <p>See where each animal has been spotted, and follow tracked animals on their journeys.</p>
@@ -70,6 +75,7 @@
       <section id="game" class="game panel" aria-label="Guess the animal" hidden></section>
       <p id="map-status" class="map-status panel" role="status">Loading map…</p>
       <aside id="profile" class="profile panel" hidden></aside>
+      <aside id="compare-panel" class="profile compare panel" aria-label="Compare animals" hidden></aside>
       <ul id="legend" class="legend panel" aria-label="Animals on the map" hidden></ul>
       <div id="playback" class="playback panel" hidden>
         <button id="play-tracks" type="button">▶ Play journeys</button>
