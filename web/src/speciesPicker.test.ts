@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Species } from "./species";
 import { speciesIcon } from "./catalog";
-import { renderSpeciesPicker, SERIES_COLORS, type PickerApi } from "./speciesPicker";
+import {
+  matchesSearch,
+  renderSpeciesPicker,
+  SERIES_COLORS,
+  type PickerApi,
+} from "./speciesPicker";
 
 const manySpecies: Species[] = Array.from({ length: 10 }, (_, index) => ({
   id: `s${index}`,
@@ -268,5 +273,56 @@ describe("renderSpeciesPicker", () => {
 
     const picked = [...container.querySelectorAll<HTMLInputElement>("input:checked")];
     expect(picked).toHaveLength(3);
+  });
+
+  it("filters cards and groups as you type, with an empty state", async () => {
+    const mixed: Species[] = [
+      { id: "lion", commonName: "Lion", scientificName: "Panthera leo" },
+      { id: "tiger", commonName: "Tiger", scientificName: "Panthera tigris" },
+      { id: "bald-eagle", commonName: "Bald eagle", scientificName: "Haliaeetus" },
+    ];
+    await renderSpeciesPicker(container, async () => mixed, handlers);
+    toggle("lion");
+    const search = container.querySelector(".species-search") as HTMLInputElement;
+    const shown = () =>
+      [...container.querySelectorAll<HTMLElement>(".species-card")]
+        .filter((card) => !card.hidden)
+        .map((card) => card.querySelector("input")?.value);
+    const type = (text: string) => {
+      search.value = text;
+      search.dispatchEvent(new Event("input"));
+    };
+
+    type("tig");
+    expect(shown()).toEqual(["tiger"]);
+    const birds = [...container.querySelectorAll<HTMLElement>(".species-group")][1];
+    expect(birds.hidden).toBe(true);
+    // Picked animals stay picked and in the tray while hidden.
+    expect(checkbox("lion").checked).toBe(true);
+    expect(container.querySelector(".picked-tray")?.textContent).toContain("Lion");
+
+    type("zebra");
+    expect(shown()).toEqual([]);
+    expect(container.textContent).toContain('No animals match "zebra"');
+
+    search.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(shown()).toEqual(["lion", "tiger", "bald-eagle"]);
+    expect(container.textContent).not.toContain("No animals match");
+  });
+});
+
+describe("matchesSearch", () => {
+  const puma: Species = { id: "puma", commonName: "Puma (panther)", scientificName: "Puma concolor" };
+
+  it("matches common and scientific names, ignoring case and accents", () => {
+    expect(matchesSearch(puma, "PANTHER")).toBe(true);
+    expect(matchesSearch(puma, "concolor")).toBe(true);
+    expect(matchesSearch({ ...puma, id: "grey-wolf" }, "bear")).toBe(false);
+    expect(matchesSearch(puma, "pumá")).toBe(true);
+    expect(matchesSearch(puma, "")).toBe(true);
+  });
+
+  it("needs every word to match", () => {
+    expect(matchesSearch(puma, "puma lion")).toBe(false);
   });
 });

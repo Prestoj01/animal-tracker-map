@@ -40,6 +40,23 @@ export interface PickerApi {
 /** How many animals "Surprise me" picks: enough to compare, and room for one more. */
 export const SURPRISE_COUNT = 3;
 
+/** Lower case without accents, so "Puma" matches "puma" and "Cafe" matches "Café". */
+function normalise(text: string): string {
+  return text.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+}
+
+/**
+ * Whether a species matches the search: every word must appear in its common or
+ * scientific name. Group names are left out, or "bear" would find wolves.
+ */
+export function matchesSearch(species: Species, query: string): boolean {
+  const haystack = normalise(`${species.commonName} ${species.scientificName}`);
+  return normalise(query)
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((word) => haystack.includes(word));
+}
+
 function showMessage(container: HTMLElement, text: string): HTMLElement {
   const message = document.createElement("p");
   message.className = "picker-message";
@@ -306,7 +323,36 @@ function showPicker(
     })
     .filter((section) => section !== null);
 
-  fieldset.append(legend, tray, ...sections);
+  // Filters the cards as you type; picked animals stay in the tray either way.
+  const search = element("input", "species-search");
+  search.type = "search";
+  search.placeholder = "Search animals";
+  search.setAttribute("aria-label", "Search animals");
+  const noMatches = element("p", "picker-message");
+  noMatches.setAttribute("role", "status");
+  noMatches.hidden = true;
+  const filter = () => {
+    const query = search.value.trim();
+    for (const card of cards) {
+      card.item.hidden = !matchesSearch(card.species, query);
+    }
+    for (const section of sections) {
+      section.hidden = [...section.querySelectorAll<HTMLElement>(".species-card")].every(
+        (item) => item.hidden,
+      );
+    }
+    noMatches.hidden = !sections.every((section) => section.hidden);
+    noMatches.textContent = noMatches.hidden ? "" : `No animals match "${query}".`;
+  };
+  search.addEventListener("input", filter);
+  search.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && search.value) {
+      search.value = "";
+      filter();
+    }
+  });
+
+  fieldset.append(legend, tray, search, noMatches, ...sections);
   container.replaceChildren(presets, fieldset);
   refresh();
   return api;
