@@ -12,6 +12,10 @@ npm install
 npm run dev
 ```
 
+### Link previews
+
+Shared links show a preview card with a title, description and `data/social-preview.jpg`, added to each page at build time by `src/siteHead.ts`. Most apps only show the image when its address is absolute, so set `siteUrl` in `web/site.config.json` to the site's address, such as `https://animal-tracker-map.<your-subdomain>.workers.dev`. Until then the image address is relative.
+
 ## Pipeline
 
 Requires Python 3.11.
