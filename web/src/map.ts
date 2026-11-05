@@ -13,7 +13,16 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import { pointYear, type Point, type SightingPoint } from "./sightings";
 import { ALL_YEARS, type Period } from "./timeline";
-import { splitAtAntimeridian, trackLabel, trackSoFar, type Track } from "./tracks";
+import type { TrackColouring } from "./trackColouring";
+import {
+  MONTH_STEPS,
+  pointsSoFar,
+  splitAtAntimeridian,
+  splitByMonthStep,
+  trackLabel,
+  trackSoFar,
+  type Track,
+} from "./tracks";
 
 setWorkerUrl(workerUrl);
 
@@ -46,6 +55,8 @@ export interface SightingsMap {
   setKindVisible(kind: LayerKind, visible: boolean): void;
   /** Marks the reader's own location, and keeps it in view alongside the animals. */
   showYouAreHere(point: Point): void;
+  /** Colours every track by its animal, or by the time of year. */
+  setTrackColouring(colouring: TrackColouring): void;
   /** Replays every track on the map from its start; returns a way to stop early. */
   playTracks(handlers: { onProgress(progress: number): void; onEnd(): void }): () => void;
 }
@@ -92,6 +103,7 @@ export function createMap(
       hideSpecies() {},
       showYouAreHere() {},
       setPeriod() {},
+      setTrackColouring() {},
       setKindVisible() {},
       playTracks: ({ onEnd }) => {
         onEnd();
@@ -263,22 +275,30 @@ export function createMap(
     });
   };
 
-  const trackData = new Map<string, { name: string; tracks: Track[] }>();
+  const trackData = new Map<string, { name: string; color: string; tracks: Track[] }>();
+  let trackColouring: TrackColouring = "animal";
+  // Each piece of track carries its two-month step, so colours can follow the season.
+  const monthColor: ExpressionSpecification = [
+    "match",
+    ["get", "step"],
+    ...MONTH_STEPS.flatMap(({ color }, step) => [step, color]),
+    MONTH_STEPS[0].color,
+  ] as unknown as ExpressionSpecification;
+  const lineColor = (color: string) => (trackColouring === "month" ? monthColor : color);
 
   /** Lines for each track as far as `progress` through its own timespan. */
   const trackFeatures = (name: string, tracks: Track[], progress: number) =>
     tracks.flatMap((track) => {
       const label = trackLabel(name, track);
-      const line =
-        progress >= 1
-          ? track.points.map(([lon, lat]): Point => [lon, lat])
-          : trackSoFar(track, progress).line;
-      return splitAtAntimeridian(line).map(
-        (coordinates): GeoJSON.Feature => ({
-          type: "Feature",
-          properties: { label },
-          geometry: { type: "LineString", coordinates },
-        }),
+      const points = progress >= 1 ? track.points : pointsSoFar(track, progress);
+      return splitByMonthStep(track.start, points).flatMap(({ step, line }) =>
+        splitAtAntimeridian(line).map(
+          (coordinates): GeoJSON.Feature => ({
+            type: "Feature",
+            properties: { label, step },
+            geometry: { type: "LineString", coordinates },
+          }),
+        ),
       );
     });
 
@@ -287,11 +307,10 @@ export function createMap(
 
   const drawFrame = (progress: number) => {
     const heads: GeoJSON.Feature[] = [];
-    for (const [id, { name, tracks }] of trackData) {
+    for (const [id, { name, color, tracks }] of trackData) {
       map
         .getSource<GeoJSONSource>(layerId("tracks", id))
         ?.setData({ type: "FeatureCollection", features: trackFeatures(name, tracks, progress) });
-      const color = map.getPaintProperty(layerId("tracks", id), "line-color");
       if (progress < 1) {
         for (const track of tracks) {
           heads.push({
@@ -386,11 +405,11 @@ export function createMap(
         id,
         tracks.flatMap((track) => track.points.map(([lon, lat]): Point => [lon, lat])),
       );
-      trackData.set(id, { name, tracks });
+      trackData.set(id, { name, color, tracks });
       onTracksChange(true);
       whenReady(layerId("tracks", id), () =>
         add("tracks", id, null, trackFeatures(name, tracks, 1), {
-          "line-color": color,
+          "line-color": lineColor(color),
           "line-width": 2,
           "line-opacity": 0.9,
           "line-blur": 0.5,
@@ -470,6 +489,16 @@ export function createMap(
       };
       step();
       return finish;
+    },
+    setTrackColouring(colouring) {
+      trackColouring = colouring;
+      whenReady("track-colouring", () => {
+        for (const [id, { color }] of trackData) {
+          if (map.getLayer(layerId("tracks", id))) {
+            map.setPaintProperty(layerId("tracks", id), "line-color", lineColor(color));
+          }
+        }
+      });
     },
     setPeriod(next) {
       period = next;

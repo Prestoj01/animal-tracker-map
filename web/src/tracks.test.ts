@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   licenceName,
+  monthStep,
+  MONTH_STEPS,
+  splitByMonthStep,
   parseTracks,
   splitAtAntimeridian,
   trackLabel,
@@ -120,5 +123,35 @@ describe("trackSoFar", () => {
   it("starts at the first point and ends at the last", () => {
     expect(trackSoFar(rain, 0).head).toEqual([0, 0]);
     expect(trackSoFar(rain, 1).line).toHaveLength(3);
+  });
+});
+
+describe("month colouring", () => {
+  it("puts each day in its two-month step", () => {
+    expect(monthStep("2020-01-01", 0)).toBe(0);
+    expect(monthStep("2020-01-01", 59)).toBe(0); // 29 February
+    expect(monthStep("2020-01-01", 60)).toBe(1); // 1 March
+    expect(monthStep("2020-12-31", 0)).toBe(5);
+    expect(monthStep("2020-12-31", 1)).toBe(0); // into the next year
+    expect(MONTH_STEPS).toHaveLength(6);
+  });
+
+  it("splits a line into joined runs by month step", () => {
+    const runs = splitByMonthStep("2020-02-28", [
+      [0, 0, 0],
+      [1, 1, 1],
+      [2, 2, 2], // 1 March
+      [3, 3, 3],
+    ]);
+    expect(runs).toEqual([
+      { step: 0, line: [[0, 0], [1, 1]] },
+      { step: 1, line: [[1, 1], [2, 2], [3, 3]] },
+    ]);
+  });
+
+  it("drops a lone first point that can't make a line", () => {
+    expect(splitByMonthStep("2020-02-29", [[0, 0, 0], [1, 1, 1]])).toEqual([
+      { step: 1, line: [[0, 0], [1, 1]] },
+    ]);
   });
 });

@@ -109,27 +109,80 @@ export function trackLabel(speciesName: string, track: Track): string {
 }
 
 /**
+ * The fixes covered by `progress` (0 to 1) of a track's own timespan, ending
+ * with where the animal is at that moment, placed between its two fixes.
+ */
+export function pointsSoFar(track: Track, progress: number): TrackPoint[] {
+  const points = track.points;
+  const cutoff = progress * points[points.length - 1][2];
+  const covered: TrackPoint[] = [];
+  for (let index = 0; index < points.length; index++) {
+    const [longitude, latitude, day] = points[index];
+    if (day <= cutoff) {
+      covered.push(points[index]);
+      continue;
+    }
+    const [fromLongitude, fromLatitude, fromDay] = points[index - 1];
+    const share = (cutoff - fromDay) / (day - fromDay);
+    covered.push([
+      fromLongitude + (longitude - fromLongitude) * share,
+      fromLatitude + (latitude - fromLatitude) * share,
+      cutoff,
+    ]);
+    break;
+  }
+  return covered;
+}
+
+/**
  * The part of a track covered by `progress` (0 to 1) of its own timespan, and
  * where the animal is at that moment, for replaying journeys.
  */
 export function trackSoFar(track: Track, progress: number): { line: Point[]; head: Point } {
-  const points = track.points;
-  const cutoff = progress * points[points.length - 1][2];
-  const line: Point[] = [];
-  for (let index = 0; index < points.length; index++) {
-    const [longitude, latitude, day] = points[index];
-    if (day <= cutoff) {
-      line.push([longitude, latitude]);
-      continue;
-    }
-    // Between two fixes, place the animal proportionally along the way.
-    const [fromLongitude, fromLatitude, fromDay] = points[index - 1];
-    const share = (cutoff - fromDay) / (day - fromDay);
-    line.push([
-      fromLongitude + (longitude - fromLongitude) * share,
-      fromLatitude + (latitude - fromLatitude) * share,
-    ]);
-    break;
-  }
+  const line = pointsSoFar(track, progress).map(([lon, lat]): Point => [lon, lat]);
   return { line, head: line[line.length - 1] };
+}
+
+/**
+ * Track colours by time of year, two months per step: an ordinal blue ramp from
+ * dark (January) to light (December), checked with the dataviz palette validator
+ * against the dark map.
+ */
+export const MONTH_STEPS = [
+  { label: "Jan–Feb", color: "#184f95" },
+  { label: "Mar–Apr", color: "#256abf" },
+  { label: "May–Jun", color: "#3987e5" },
+  { label: "Jul–Aug", color: "#6da7ec" },
+  { label: "Sep–Oct", color: "#9ec5f4" },
+  { label: "Nov–Dec", color: "#cde2fb" },
+];
+
+/** Which of MONTH_STEPS a point `day` days after `start` falls in. */
+export function monthStep(start: string, day: number): number {
+  return Math.floor(addDays(start, day).getUTCMonth() / 2);
+}
+
+/**
+ * Splits a line into runs in the same month step. Each run starts where the last
+ * ended, so the coloured pieces join up.
+ */
+export function splitByMonthStep(
+  start: string,
+  points: TrackPoint[],
+): { step: number; line: Point[] }[] {
+  const runs: { step: number; line: Point[] }[] = [];
+  points.forEach(([longitude, latitude, day], index) => {
+    const step = monthStep(start, day);
+    const current = runs[runs.length - 1];
+    if (current?.step === step) {
+      current.line.push([longitude, latitude]);
+      return;
+    }
+    const previous = points[index - 1];
+    runs.push({
+      step,
+      line: previous ? [[previous[0], previous[1]], [longitude, latitude]] : [[longitude, latitude]],
+    });
+  });
+  return runs.filter((run) => run.line.length >= 2);
 }

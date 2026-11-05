@@ -10,6 +10,7 @@ function fakeMap() {
     setKindVisible: vi.fn(),
     showYouAreHere: vi.fn(),
     setPeriod: vi.fn(),
+    setTrackColouring: vi.fn(),
     playTracks: vi.fn(() => () => {}),
   };
 }

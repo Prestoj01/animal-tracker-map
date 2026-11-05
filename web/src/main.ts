@@ -12,6 +12,7 @@ import { copyText, readAnimals, withAnimals } from "./shareLink";
 import { renderSpeciesPicker, SURPRISE_COUNT, type PickerApi } from "./speciesPicker";
 import { loadSummary } from "./summary";
 import { createTimeline } from "./timeline";
+import { createTrackColouring } from "./trackColouring";
 import { loadTracks } from "./tracks";
 import "./style.css";
 
@@ -24,6 +25,7 @@ function byId(id: string): HTMLElement {
 }
 
 const playback = byId("playback");
+const trackColouringPanel = byId("track-colouring");
 const mapStatus = byId("map-status");
 // The map library is most of the download, so it loads separately: the animal
 // list is usable meanwhile, and anything picked is drawn once the map arrives.
@@ -32,6 +34,8 @@ const map = createLazyMap(
     createMap(byId("map"), mapStatus, {
       onTracksChange: (hasTracks) => {
         playback.hidden = !hasTracks;
+        // Only worth offering while there are tracks to colour.
+        trackColouringPanel.hidden = !hasTracks;
         if (!hasTracks) {
           stopReplay?.();
         }
@@ -182,6 +186,7 @@ const sightingsController = createSightingsController(
   { legend: byId("legend"), sources: byId("sources") },
 );
 createTimeline(byId("timeline"), (period) => sightingsController.setPeriod(period));
+createTrackColouring(trackColouringPanel, (colouring) => map.setTrackColouring(colouring));
 
 void renderSpeciesPicker(
   byId("species-picker"),

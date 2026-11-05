@@ -486,4 +486,44 @@ describe("createMap", () => {
     map.setPeriod(ALL_YEARS);
     expect(mock.layers.get("sightings-lion")?.filter).toBeNull();
   });
+
+  it("splits tracks by month and can colour them by month", () => {
+    const map = loadedMap();
+    // 30 January to 2 February crosses from one two-month step into the next.
+    const track: Track = {
+      animal: "Rain",
+      start: "2020-02-27",
+      points: [
+        [1, 2, 0],
+        [3, 4, 1],
+        [5, 6, 3],
+      ],
+    };
+    map.showTracks("lion", "Lion", "#f00", [track]);
+    const steps = mock.sources
+      .get("tracks-lion")
+      ?.data.features.map((feature) => feature.properties.step);
+    expect(steps).toEqual([0, 1]);
+    expect(mock.layers.get("tracks-lion")?.paint["line-color"]).toBe("#f00");
+
+    map.setTrackColouring("month");
+    const color = mock.layers.get("tracks-lion")?.paint["line-color"];
+    expect(color).toEqual(expect.arrayContaining(["match", ["get", "step"]]));
+
+    // Animals added later follow the same colouring, and so does switching back.
+    map.showTracks("tiger", "Tiger", "#0f0", [track]);
+    expect(mock.layers.get("tracks-tiger")?.paint["line-color"]).toEqual(color);
+    map.setTrackColouring("animal");
+    expect(mock.layers.get("tracks-tiger")?.paint["line-color"]).toBe("#0f0");
+  });
+
+  it("keeps each replay head in its animal's colour while coloured by month", () => {
+    const map = loadedMap();
+    map.showTracks("lion", "Lion", "#f00", [line([1, 2], [3, 4], [5, 6])]);
+    map.setTrackColouring("month");
+
+    map.playTracks({ onProgress: () => {}, onEnd: () => {} });
+    const heads = mock.sources.get("tracks-replay-heads")?.data.features;
+    expect(heads?.[0].properties.color).toBe("#f00");
+  });
 });

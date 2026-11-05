@@ -40,6 +40,7 @@ export function createLazyMap(
     setKindVisible: (...args) => later((map) => map.setKindVisible(...args)),
     showYouAreHere: (...args) => later((map) => map.showYouAreHere(...args)),
     setPeriod: (...args) => later((map) => map.setPeriod(...args)),
+    setTrackColouring: (...args) => later((map) => map.setTrackColouring(...args)),
     playTracks(handlers) {
       // There is nothing to replay until the map exists.
       if (!map) {

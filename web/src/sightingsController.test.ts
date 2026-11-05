@@ -38,6 +38,7 @@ const map = {
   setKindVisible: vi.fn(),
   showYouAreHere: vi.fn(),
   setPeriod: vi.fn(),
+  setTrackColouring: vi.fn(),
   playTracks: vi.fn(),
 };
 const status = { set: vi.fn() };
