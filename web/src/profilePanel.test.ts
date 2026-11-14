@@ -54,7 +54,7 @@ describe("createProfilePanel", () => {
     expect(panel.textContent).toContain("The cougar is a large cat.");
     expect(panel.textContent).toContain("120 places");
     expect(panel.textContent).toContain("1 animal");
-    expect(panel.textContent).toContain("Coming soon");
+    expect(panel.textContent).not.toContain("Conservation status");
     const links = [...panel.querySelectorAll("a")].map((anchor) => anchor.href);
     expect(links).toContain("https://en.wikipedia.org/wiki/Cougar");
   });
@@ -71,6 +71,7 @@ describe("createProfilePanel", () => {
 
     expect(panel.querySelector("img")).toBeNull();
     expect(panel.textContent).toContain("The cougar is a large cat.");
+    expect(panel.querySelector(".profile-facts")).toBeNull();
   });
 
   it("shows an empty state for a species without a profile", async () => {

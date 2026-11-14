@@ -28,7 +28,7 @@ function plural(count: number, one: string, many: string): string {
   return `${count.toLocaleString()} ${count === 1 ? one : many}`;
 }
 
-function facts(counts: Summary[string] | undefined): HTMLElement {
+function facts(counts: Summary[string]): HTMLElement {
   const list = document.createElement("ul");
   list.className = "profile-facts";
   const add = (label: string, value: string) => {
@@ -40,15 +40,9 @@ function facts(counts: Summary[string] | undefined): HTMLElement {
     item.append(term, detail);
     list.append(item);
   };
-  if (counts) {
-    add("Seen in", counts.sightings ? plural(counts.sightings, "place", "places") : "No sightings yet");
-    add(
-      "Tracked",
-      counts.tracks ? plural(counts.tracks, "animal", "animals") : "No tracking data",
-    );
-  }
-  // Filled in once the IUCN Red List is connected.
-  add("Conservation status", "Coming soon");
+  add("Seen in", counts.sightings ? plural(counts.sightings, "place", "places") : "No sightings yet");
+  add("Tracked", counts.tracks ? plural(counts.tracks, "animal", "animals") : "No tracking data");
+  // A "Conservation status" row goes here once the IUCN Red List API key arrives.
   return list;
 }
 
@@ -93,7 +87,9 @@ function renderProfile(
   if (profile.extract) {
     parts.push(paragraph("profile-extract", profile.extract));
   }
-  parts.push(facts(counts));
+  if (counts) {
+    parts.push(facts(counts));
+  }
   parts.push(
     paragraph(
       "profile-credit",

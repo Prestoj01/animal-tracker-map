@@ -1,6 +1,6 @@
 # animal-tracker-map
 
-A static site showing species sightings, migration tracks and conservation status on a map.
+A static site showing species sightings and migration tracks on a map. Conservation status (IUCN Red List) is planned.
 
 ## Web app
 
