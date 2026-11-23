@@ -1,14 +1,14 @@
 {
   "lion": {
-    "sightings": 1352,
+    "sightings": 1355,
     "tracks": 0
   },
   "tiger": {
-    "sightings": 415,
+    "sightings": 418,
     "tracks": 0
   },
   "cheetah": {
-    "sightings": 850,
+    "sightings": 848,
     "tracks": 0
   },
   "puma": {
@@ -16,15 +16,15 @@
     "tracks": 0
   },
   "african-bush-elephant": {
-    "sightings": 1353,
+    "sightings": 1348,
     "tracks": 0
   },
   "african-forest-elephant": {
-    "sightings": 350,
+    "sightings": 353,
     "tracks": 0
   },
   "giraffe": {
-    "sightings": 371,
+    "sightings": 372,
     "tracks": 0
   },
   "white-rhino": {
@@ -44,27 +44,27 @@
     "tracks": 0
   },
   "polar-bear": {
-    "sightings": 1281,
+    "sightings": 1283,
     "tracks": 0
   },
   "brown-bear": {
-    "sightings": 1987,
+    "sightings": 1989,
     "tracks": 0
   },
   "grey-wolf": {
-    "sightings": 1688,
+    "sightings": 1689,
     "tracks": 0
   },
   "wildebeest": {
-    "sightings": 695,
+    "sightings": 694,
     "tracks": 0
   },
   "caribou": {
-    "sightings": 1032,
+    "sightings": 1033,
     "tracks": 0
   },
   "humpback-whale": {
-    "sightings": 1625,
+    "sightings": 1628,
     "tracks": 0
   },
   "blue-whale": {
@@ -76,15 +76,15 @@
     "tracks": 0
   },
   "great-white-shark": {
-    "sightings": 640,
+    "sightings": 638,
     "tracks": 0
   },
   "green-sea-turtle": {
-    "sightings": 1929,
+    "sightings": 1925,
     "tracks": 0
   },
   "emperor-penguin": {
-    "sightings": 730,
+    "sightings": 732,
     "tracks": 0
   },
   "bald-eagle": {
@@ -92,7 +92,7 @@
     "tracks": 4
   },
   "snowy-owl": {
-    "sightings": 994,
+    "sightings": 992,
     "tracks": 0
   }
 }
